@@ -1,15 +1,13 @@
 /* ============================================================
-   OMQ QR Studio — static (forever) QR codes with customization
+   OMQ QR Studio
    ============================================================ */
 
 const $ = (id) => document.getElementById(id);
 
-const STORAGE_KEY = 'omq-qr-library-v2';
 const PREVIEW_SIZE = 280;
 
 let activeType = 'url';
 let logoDataUrl = null;
-let library = loadLibrary();
 
 /* ---------- QR instance (preview) ---------- */
 const qr = new QRCodeStyling(buildOptions(PREVIEW_SIZE));
@@ -51,8 +49,7 @@ function buildData() {
     case 'sms': {
       const n = $('smsNumber').value.trim();
       if (!n) return '';
-      const body = $('smsBody').value.trim();
-      return `SMSTO:${n}:${body}`;
+      return `SMSTO:${n}:${$('smsBody').value.trim()}`;
     }
     case 'vcard': {
       const first = $('vcFirst').value.trim();
@@ -78,10 +75,9 @@ function buildData() {
 /* ---------- Options builder ---------- */
 function buildOptions(size) {
   const data = buildData();
-  const useGradient = $('useGradient').checked;
   const scale = size / PREVIEW_SIZE;
 
-  const dotsColorOpts = useGradient
+  const colorOpts = $('useGradient').checked
     ? {
         gradient: {
           type: 'linear',
@@ -101,22 +97,28 @@ function buildOptions(size) {
     data: data || ' ',
     margin: Math.round(Number($('qrMargin').value) * scale),
     image: logoDataUrl || undefined,
-    qrOptions: {
-      errorCorrectionLevel: logoDataUrl ? 'H' : $('errorLevel').value,
-    },
+    qrOptions: { errorCorrectionLevel: logoDataUrl ? 'H' : $('errorLevel').value },
     imageOptions: {
       crossOrigin: 'anonymous',
       imageSize: Number($('logoSize').value) / 100,
       margin: Math.round(4 * scale),
       hideBackgroundDots: true,
     },
-    dotsOptions: { type: $('dotStyle').value, ...dotsColorOpts },
-    cornersSquareOptions: { type: $('cornerSquareStyle').value, ...dotsColorOpts },
-    cornersDotOptions: { type: $('cornerDotStyle').value, ...dotsColorOpts },
+    dotsOptions: { type: $('dotStyle').value, ...colorOpts },
+    cornersSquareOptions: { type: $('cornerSquareStyle').value, ...colorOpts },
+    cornersDotOptions: { type: $('cornerDotStyle').value, ...colorOpts },
     backgroundOptions: {
       color: $('bgTransparent').checked ? 'transparent' : $('bgColor').value,
     },
   };
+}
+
+function currentFileName() {
+  return (
+    ($('fileName').value.trim() || 'omq-qr-code')
+      .replace(/[^\w\- ]+/g, '')
+      .replace(/\s+/g, '-') || 'omq-qr-code'
+  );
 }
 
 /* ---------- Live preview (debounced) ---------- */
@@ -130,6 +132,7 @@ function refresh() {
     $('statusText').textContent = data
       ? 'Live preview — scan it with your phone to test.'
       : 'Type something to see your QR code.';
+    prepareShareFile();
   }, 150);
 }
 
@@ -142,10 +145,11 @@ $('typeTabs').addEventListener('click', (e) => {
   document.querySelectorAll('.type-form').forEach((f) =>
     f.classList.toggle('active', f.dataset.form === activeType)
   );
+  btn.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
   refresh();
 });
 
-/* ---------- Wire every input to the live preview ---------- */
+/* ---------- Wire inputs to the live preview ---------- */
 document.querySelectorAll('input, textarea, select').forEach((el) => {
   el.addEventListener('input', refresh);
 });
@@ -162,13 +166,59 @@ $('logoSize').addEventListener('input', () => {
   $('logoSizeVal').textContent = $('logoSize').value + '%';
 });
 
-/* ---------- Logo upload ---------- */
+/* ---------- Built-in OMQ logo toggle ---------- */
+let omqLogoPromise = null;
+
+function getOmqLogo() {
+  if (!omqLogoPromise) {
+    omqLogoPromise = fetch('IMG/omq-logo.png')
+      .then((r) => {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.blob();
+      })
+      .then(
+        (blob) =>
+          new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          })
+      );
+  }
+  return omqLogoPromise;
+}
+
+$('useOmqLogo').addEventListener('change', async () => {
+  if ($('useOmqLogo').checked) {
+    try {
+      logoDataUrl = await getOmqLogo();
+    } catch {
+      omqLogoPromise = null;
+      $('useOmqLogo').checked = false;
+      $('statusText').textContent = '⚠ Could not load the OMQ logo (IMG/omq-logo.png).';
+      return;
+    }
+    $('logoInput').value = '';
+    $('logoBtnText').textContent = 'Upload your own logo';
+    $('removeLogoBtn').classList.add('hidden');
+    $('logoSizeWrap').style.display = 'flex';
+    $('errorLevel').value = 'H';
+  } else {
+    logoDataUrl = null;
+    $('logoSizeWrap').style.display = 'none';
+  }
+  refresh();
+});
+
+/* ---------- Custom logo upload ---------- */
 $('logoInput').addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = () => {
     logoDataUrl = reader.result;
+    $('useOmqLogo').checked = false;
     $('logoBtnText').textContent = '✓ ' + file.name;
     $('removeLogoBtn').classList.remove('hidden');
     $('logoSizeWrap').style.display = 'flex';
@@ -180,196 +230,133 @@ $('logoInput').addEventListener('change', (e) => {
 
 $('removeLogoBtn').addEventListener('click', () => {
   logoDataUrl = null;
+  $('useOmqLogo').checked = false;
   $('logoInput').value = '';
-  $('logoBtnText').textContent = 'Upload logo';
+  $('logoBtnText').textContent = 'Upload your own logo';
   $('removeLogoBtn').classList.add('hidden');
   $('logoSizeWrap').style.display = 'none';
   refresh();
 });
 
-/* ---------- Download ---------- */
+/* ---------- Desktop downloads ---------- */
 function download(extension) {
-  const data = buildData();
-  if (!data) {
+  if (!buildData()) {
     $('statusText').textContent = '⚠ Add some content first.';
     return;
   }
   const size = Number($('exportSize').value);
-  const name = ($('fileName').value.trim() || 'omq-qr-code').replace(/[^\w\- ]+/g, '').replace(/\s+/g, '-');
+  const name = currentFileName();
 
-  const exportQr = new QRCodeStyling({
+  new QRCodeStyling({
     ...buildOptions(size),
     type: extension === 'svg' ? 'svg' : 'canvas',
-  });
-  exportQr.download({ name, extension });
-  $('statusText').textContent = `Downloaded ${name}.${extension} at ${extension === 'svg' ? 'vector' : size + ' px'} quality.`;
+  }).download({ name, extension });
+
+  $('statusText').textContent = `Downloaded ${name}.${extension}`;
 }
 
 $('downloadPng').addEventListener('click', () => download('png'));
 $('downloadSvg').addEventListener('click', () => download('svg'));
 $('downloadJpeg').addEventListener('click', () => download('jpeg'));
 
-/* ---------- Library (localStorage) ---------- */
-function loadLibrary() {
+/* ============================================================
+   Mobile save
+   Only the button that actually works on the device is shown.
+   ============================================================ */
+
+const isIOS =
+  /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+function supportsFileShare() {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-  } catch {
-    return [];
-  }
-}
-
-function saveLibrary() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(library));
-  } catch {
-    $('statusText').textContent = '⚠ Could not save — browser storage is full (large logos take space).';
-  }
-}
-
-function snapshotSettings() {
-  const settings = {};
-  document.querySelectorAll('input, textarea, select').forEach((el) => {
-    if (!el.id || el.type === 'file') return;
-    settings[el.id] = el.type === 'checkbox' ? el.checked : el.value;
-  });
-  return settings;
-}
-
-function applySettings(settings) {
-  Object.entries(settings).forEach(([id, value]) => {
-    const el = $(id);
-    if (!el) return;
-    if (el.type === 'checkbox') el.checked = value;
-    else el.value = value;
-  });
-  $('fgColor2Wrap').classList.toggle('hidden', !$('useGradient').checked);
-  $('marginVal').textContent = $('qrMargin').value;
-  $('logoSizeVal').textContent = $('logoSize').value + '%';
-}
-
-$('saveDesignBtn').addEventListener('click', () => {
-  const data = buildData();
-  if (!data) {
-    $('statusText').textContent = '⚠ Add some content before saving.';
-    return;
-  }
-  const defaultName = $('fileName').value.trim() || `${activeType.toUpperCase()} — ${new Date().toLocaleDateString()}`;
-  const name = prompt('Name this QR design:', defaultName);
-  if (name === null) return;
-
-  library.unshift({
-    id: Date.now(),
-    name: name.trim() || defaultName,
-    type: activeType,
-    createdAt: new Date().toISOString(),
-    settings: snapshotSettings(),
-    logo: logoDataUrl,
-  });
-  saveLibrary();
-  renderLibrary();
-  $('statusText').textContent = '✓ Saved to your library.';
-});
-
-$('clearLibraryBtn').addEventListener('click', () => {
-  if (!library.length) return;
-  if (!confirm('Delete ALL saved QR designs? This cannot be undone.')) return;
-  library = [];
-  saveLibrary();
-  renderLibrary();
-});
-
-function renderLibrary() {
-  const grid = $('libraryGrid');
-  grid.innerHTML = '';
-
-  if (!library.length) {
-    grid.innerHTML = '<p class="library-empty">Nothing saved yet — build a QR and hit "Save to my library".</p>';
-    return;
-  }
-
-  library.forEach((item) => {
-    const card = document.createElement('div');
-    card.className = 'library-item';
-
-    const thumb = document.createElement('div');
-    thumb.className = 'thumb';
-
-    const nameEl = document.createElement('div');
-    nameEl.className = 'item-name';
-    nameEl.textContent = item.name;
-    nameEl.title = item.name;
-
-    const meta = document.createElement('div');
-    meta.className = 'item-meta';
-    meta.textContent = `${item.type.toUpperCase()} · ${new Date(item.createdAt).toLocaleDateString()}`;
-
-    const actions = document.createElement('div');
-    actions.className = 'item-actions';
-
-    const loadBtn = document.createElement('button');
-    loadBtn.className = 'secondary';
-    loadBtn.textContent = 'Load';
-    loadBtn.addEventListener('click', () => loadDesign(item));
-
-    const delBtn = document.createElement('button');
-    delBtn.className = 'ghost';
-    delBtn.textContent = 'Delete';
-    delBtn.addEventListener('click', () => {
-      library = library.filter((x) => x.id !== item.id);
-      saveLibrary();
-      renderLibrary();
+    const probe = new File([new Blob(['x'], { type: 'image/png' })], 'p.png', {
+      type: 'image/png',
     });
-
-    actions.append(loadBtn, delBtn);
-    card.append(thumb, nameEl, meta, actions);
-    grid.appendChild(card);
-
-    renderThumb(item, thumb);
-  });
+    return !!(navigator.canShare && navigator.canShare({ files: [probe] }));
+  } catch {
+    return false;
+  }
 }
 
-function renderThumb(item, container) {
-  const saved = { active: activeType, logo: logoDataUrl, settings: snapshotSettings() };
+/* 'share'    → native share sheet (Save to Photos / Files) — iOS + Android
+   'download' → normal file download — Android browsers without share
+   'longpress'→ no reliable button, tell the user to long-press the QR instead */
+const saveMode = supportsFileShare() ? 'share' : isIOS ? 'longpress' : 'download';
 
-  activeType = item.type;
-  logoDataUrl = item.logo || null;
-  applySettings(item.settings);
-  const opts = buildOptions(150);
+const mobileSaveBtn = $('mobileSaveBtn');
 
-  activeType = saved.active;
-  logoDataUrl = saved.logo;
-  applySettings(saved.settings);
-
-  new QRCodeStyling(opts).append(container);
+if (saveMode === 'longpress') {
+  $('mobileBar').style.display = 'none';
+  $('iosHint').classList.remove('hidden');
+} else {
+  mobileSaveBtn.textContent = saveMode === 'share' ? 'Save QR to phone' : 'Download QR (PNG)';
 }
 
-function loadDesign(item) {
-  activeType = item.type;
-  logoDataUrl = item.logo || null;
-  applySettings(item.settings);
+/* The share sheet must open inside the tap handler, so the PNG is
+   generated ahead of time and kept ready. */
+let shareFile = null;
+let shareTimer = null;
 
-  document.querySelectorAll('.tab').forEach((t) =>
-    t.classList.toggle('active', t.dataset.type === activeType)
-  );
-  document.querySelectorAll('.type-form').forEach((f) =>
-    f.classList.toggle('active', f.dataset.form === activeType)
-  );
+const mobileView = window.matchMedia('(max-width: 720px)');
 
-  if (logoDataUrl) {
-    $('logoBtnText').textContent = '✓ Saved logo';
-    $('removeLogoBtn').classList.remove('hidden');
-    $('logoSizeWrap').style.display = 'flex';
-  } else {
-    $('logoBtnText').textContent = 'Upload logo';
-    $('removeLogoBtn').classList.add('hidden');
-    $('logoSizeWrap').style.display = 'none';
+function prepareShareFile() {
+  if (saveMode !== 'share' || !mobileView.matches) return;
+  shareFile = null;
+  clearTimeout(shareTimer);
+  if (!buildData()) return;
+
+  shareTimer = setTimeout(async () => {
+    const name = currentFileName();
+    try {
+      const blob = await new QRCodeStyling(
+        buildOptions(Number($('exportSize').value))
+      ).getRawData('png');
+      if (blob) shareFile = new File([blob], `${name}.png`, { type: 'image/png' });
+    } catch {
+      shareFile = null;
+    }
+  }, 400);
+}
+
+mobileSaveBtn.addEventListener('click', async () => {
+  if (!buildData()) {
+    $('statusText').textContent = '⚠ Add some content first.';
+    return;
   }
 
-  refresh();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-  $('statusText').textContent = `✓ Loaded "${item.name}" — edit or re-download it.`;
-}
+  if (saveMode === 'download') {
+    download('png');
+    return;
+  }
+
+  if (shareFile && navigator.canShare({ files: [shareFile] })) {
+    try {
+      await navigator.share({ files: [shareFile], title: shareFile.name });
+      $('statusText').textContent = '✓ QR saved.';
+    } catch (err) {
+      if (err && err.name !== 'AbortError') {
+        $('statusText').textContent = 'Save cancelled — try again.';
+      }
+    }
+    return;
+  }
+
+  /* Not ready yet (still rendering) — build it now, then share. */
+  $('statusText').textContent = 'Preparing your QR…';
+  try {
+    const blob = await new QRCodeStyling(
+      buildOptions(Number($('exportSize').value))
+    ).getRawData('png');
+    const file = new File([blob], `${currentFileName()}.png`, { type: 'image/png' });
+    await navigator.share({ files: [file], title: file.name });
+    $('statusText').textContent = '✓ QR saved.';
+  } catch (err) {
+    if (err && err.name === 'AbortError') return;
+    $('iosHint').classList.remove('hidden');
+    $('statusText').textContent = 'Press and hold the QR code to save it.';
+  }
+});
 
 /* ---------- Init ---------- */
-renderLibrary();
 refresh();
