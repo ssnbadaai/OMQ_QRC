@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OMQ QR Studio — Forever QR Codes</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="lib/qr-code-styling.js"></script>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">◈</span>
+      <span class="brand-name">OMQ <b>QR Studio</b></span>
+    </div>
+    <span class="forever-badge" title="Static QR codes encode your data directly in the image. They never expire, need no server, and work forever.">
+      ∞ Forever — never expires
+    </span>
+  </header>
+
+  <main class="layout">
+
+    <!-- ============ LEFT: CONTENT ============ -->
+    <section class="panel">
+      <h2><span class="step">1</span> Content</h2>
+
+      <div class="type-tabs" id="typeTabs">
+        <button class="tab active" data-type="url">URL</button>
+        <button class="tab" data-type="text">Text</button>
+        <button class="tab" data-type="wifi">Wi-Fi</button>
+        <button class="tab" data-type="email">Email</button>
+        <button class="tab" data-type="phone">Phone</button>
+        <button class="tab" data-type="sms">SMS</button>
+        <button class="tab" data-type="vcard">vCard</button>
+      </div>
+
+      <!-- URL -->
+      <div class="type-form active" data-form="url">
+        <label>Website URL
+          <input type="url" id="urlInput" placeholder="https://example.com" value="https://" />
+        </label>
+      </div>
+
+      <!-- Text -->
+      <div class="type-form" data-form="text">
+        <label>Plain text
+          <textarea id="textInput" rows="4" placeholder="Any text you want the QR to contain…"></textarea>
+        </label>
+      </div>
+
+      <!-- WiFi -->
+      <div class="type-form" data-form="wifi">
+        <label>Network name (SSID)
+          <input type="text" id="wifiSsid" placeholder="MyNetwork" />
+        </label>
+        <label>Password
+          <input type="text" id="wifiPass" placeholder="Password" />
+        </label>
+        <div class="field-row">
+          <label>Security
+            <select id="wifiType">
+              <option value="WPA">WPA / WPA2 / WPA3</option>
+              <option value="WEP">WEP</option>
+              <option value="nopass">No password</option>
+            </select>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="wifiHidden" /> Hidden network
+          </label>
+        </div>
+      </div>
+
+      <!-- Email -->
+      <div class="type-form" data-form="email">
+        <label>Email address
+          <input type="email" id="emailTo" placeholder="hello@example.com" />
+        </label>
+        <label>Subject
+          <input type="text" id="emailSubject" placeholder="Optional subject" />
+        </label>
+        <label>Message
+          <textarea id="emailBody" rows="3" placeholder="Optional message"></textarea>
+        </label>
+      </div>
+
+      <!-- Phone -->
+      <div class="type-form" data-form="phone">
+        <label>Phone number
+          <input type="tel" id="phoneNumber" placeholder="+1 555 000 0000" />
+        </label>
+      </div>
+
+      <!-- SMS -->
+      <div class="type-form" data-form="sms">
+        <label>Phone number
+          <input type="tel" id="smsNumber" placeholder="+1 555 000 0000" />
+        </label>
+        <label>Message
+          <textarea id="smsBody" rows="3" placeholder="Pre-filled message"></textarea>
+        </label>
+      </div>
+
+      <!-- vCard -->
+      <div class="type-form" data-form="vcard">
+        <div class="field-row">
+          <label>First name <input type="text" id="vcFirst" /></label>
+          <label>Last name <input type="text" id="vcLast" /></label>
+        </div>
+        <label>Organization <input type="text" id="vcOrg" /></label>
+        <div class="field-row">
+          <label>Phone <input type="tel" id="vcPhone" /></label>
+          <label>Email <input type="email" id="vcEmail" /></label>
+        </div>
+        <label>Website <input type="url" id="vcUrl" placeholder="https://" /></label>
+      </div>
+    </section>
+
+    <!-- ============ MIDDLE: CUSTOMIZATION ============ -->
+    <section class="panel">
+      <h2><span class="step">2</span> Customize</h2>
+
+      <h3>Shape</h3>
+      <div class="field-row">
+        <label>Dot style
+          <select id="dotStyle">
+            <option value="square">Square</option>
+            <option value="rounded" selected>Rounded</option>
+            <option value="dots">Dots</option>
+            <option value="classy">Classy</option>
+            <option value="classy-rounded">Classy rounded</option>
+            <option value="extra-rounded">Extra rounded</option>
+          </select>
+        </label>
+        <label>Corner frame
+          <select id="cornerSquareStyle">
+            <option value="square">Square</option>
+            <option value="extra-rounded" selected>Rounded</option>
+            <option value="dot">Dot</option>
+          </select>
+        </label>
+        <label>Corner dot
+          <select id="cornerDotStyle">
+            <option value="square">Square</option>
+            <option value="dot" selected>Dot</option>
+          </select>
+        </label>
+      </div>
+
+      <h3>Colors</h3>
+      <div class="field-row">
+        <label>Dots
+          <input type="color" id="fgColor" value="#1a1a2e" />
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" id="useGradient" /> Gradient
+        </label>
+        <label id="fgColor2Wrap" class="hidden">Second color
+          <input type="color" id="fgColor2" value="#4361ee" />
+        </label>
+      </div>
+      <div class="field-row">
+        <label>Background
+          <input type="color" id="bgColor" value="#ffffff" />
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" id="bgTransparent" /> Transparent
+        </label>
+      </div>
+
+      <h3>Logo (optional)</h3>
+      <div class="field-row">
+        <label class="file-label">
+          <input type="file" id="logoInput" accept="image/*" />
+          <span id="logoBtnText">Upload logo</span>
+        </label>
+        <button type="button" id="removeLogoBtn" class="ghost hidden">✕ Remove</button>
+      </div>
+      <div class="field-row" id="logoSizeWrap" style="display:none">
+        <label>Logo size
+          <input type="range" id="logoSize" min="15" max="40" step="1" value="28" />
+          <span class="range-val" id="logoSizeVal">28%</span>
+        </label>
+      </div>
+
+      <h3>Advanced</h3>
+      <div class="field-row">
+        <label>Margin
+          <input type="range" id="qrMargin" min="0" max="40" step="2" value="12" />
+          <span class="range-val" id="marginVal">12</span>
+        </label>
+        <label>Error correction
+          <select id="errorLevel">
+            <option value="L">L — 7%</option>
+            <option value="M">M — 15%</option>
+            <option value="Q" selected>Q — 25%</option>
+            <option value="H">H — 30% (best with logo)</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <!-- ============ RIGHT: PREVIEW & EXPORT ============ -->
+    <section class="panel preview-panel">
+      <h2><span class="step">3</span> Preview &amp; Export</h2>
+
+      <div class="preview-frame" id="qrPreview"></div>
+      <p class="status" id="statusText">Type something to see your QR code.</p>
+
+      <div class="export-row">
+        <label>Export size
+          <select id="exportSize">
+            <option value="512">512 px</option>
+            <option value="1024" selected>1024 px</option>
+            <option value="2048">2048 px</option>
+            <option value="4096">4096 px</option>
+          </select>
+        </label>
+        <label>File name
+          <input type="text" id="fileName" placeholder="my-qr-code" />
+        </label>
+      </div>
+
+      <div class="actions">
+        <button id="downloadPng">Download PNG</button>
+        <button id="downloadSvg" class="secondary">SVG</button>
+        <button id="downloadJpeg" class="secondary">JPEG</button>
+      </div>
+
+      <button id="saveDesignBtn" class="save-btn">💾 Save to my library</button>
+
+      <p class="forever-note">
+        This is a <b>static QR code</b>: the data lives inside the image itself.
+        No server, no subscription, no expiry — it will scan forever.
+      </p>
+    </section>
+  </main>
+
+  <!-- ============ SAVED LIBRARY ============ -->
+  <section class="panel library-panel">
+    <div class="library-header">
+      <h2>My QR Library</h2>
+      <button id="clearLibraryBtn" class="ghost">Clear all</button>
+    </div>
+    <p class="library-hint">Saved designs are stored in this browser and reload with all their customization.</p>
+    <div class="library-grid" id="libraryGrid"></div>
+  </section>
+
+  <footer class="footer">OMQ QR Studio — static QR codes, yours forever.</footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
