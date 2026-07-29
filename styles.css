@@ -308,6 +308,165 @@ button.ghost:hover { color: #ff6b6b; border-color: #ff6b6b; }
   padding: 18px;
   border-top: 1px solid var(--border);
 }
+.footer a { color: var(--muted); }
+.footer a:hover { color: var(--accent-hover); }
+
+.topbar-link {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 14px;
+}
+.topbar-link:hover { color: var(--text); }
+
+.opt {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--muted);
+  opacity: 0.75;
+}
+
+.muted-copy {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* ---------- Short link ---------- */
+.short-toggle { margin-top: 4px; white-space: normal; }
+
+.short-box {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  margin-top: 4px;
+}
+.short-explain {
+  margin: 0 0 12px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.short-box .actions { margin-top: 0; }
+.short-box .status { text-align: left; margin-bottom: 0; }
+
+.status a { color: var(--accent-hover); }
+.status b { color: var(--text); }
+.status-ok { color: #2ecc8f; }
+.status-warn { color: #ffb454; }
+
+/* ---------- Link manager ---------- */
+.admin-wrap {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 24px 28px 40px;
+  display: grid;
+  gap: 20px;
+}
+
+.admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.admin-header h2 { margin: 0; }
+
+.how-to {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.how-to summary { cursor: pointer; color: var(--accent-hover); }
+.how-to ol { margin: 12px 0 0; padding-left: 20px; line-height: 1.7; }
+.how-to b { color: var(--text); }
+
+.prefix-input {
+  display: flex;
+  align-items: stretch;
+  margin-top: 5px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  overflow: hidden;
+}
+.prefix-input .prefix {
+  display: flex;
+  align-items: center;
+  padding: 0 4px 0 12px;
+  font-size: 14px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.prefix-input input {
+  border: none;
+  margin-top: 0;
+  background: transparent;
+  padding-left: 0;
+  border-radius: 0;
+}
+
+.link-row {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  padding: 14px;
+  margin-top: 12px;
+}
+
+.link-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.link-code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  min-height: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent-hover);
+  cursor: pointer;
+  word-break: break-all;
+  text-align: left;
+}
+.link-code:hover { text-decoration: underline; }
+
+.link-meta { font-size: 12px; color: var(--muted); }
+
+.link-dest { display: flex; gap: 8px; align-items: stretch; }
+.link-dest input { margin-top: 0; flex: 1; min-width: 0; font-size: 14px; }
+.link-dest button { flex: 0 0 auto; }
+
+.link-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+
+.btn-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 8px 16px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 13.5px;
+  text-decoration: none;
+}
+.btn-link:hover { border-color: var(--accent); }
+
+.link-row .status { text-align: left; margin: 8px 0 0; }
 
 /* ---------- Mobile action bar (hidden on desktop) ---------- */
 .mobile-bar { display: none; }
@@ -385,6 +544,10 @@ button.ghost:hover { color: #ff6b6b; border-color: #ff6b6b; }
 
   /* Keep the footer clear of the fixed bar */
   .footer { padding-bottom: calc(90px + env(safe-area-inset-bottom)); }
+
+  .admin-wrap { padding: 12px 12px 30px; gap: 12px; }
+  .link-dest { flex-direction: column; }
+  .link-actions > * { flex: 1; }
 }
 
 /* Users who prefer reduced motion */

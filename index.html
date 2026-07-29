@@ -75,6 +75,23 @@
           <input type="url" id="urlInput" inputmode="url" autocapitalize="off" autocorrect="off"
                  spellcheck="false" placeholder="https://example.com" value="https://" />
         </label>
+
+        <label class="checkbox-label short-toggle">
+          <input type="checkbox" id="useShortLink" />
+          Use a short link <span class="opt">destination editable later</span>
+        </label>
+
+        <div class="short-box hidden" id="shortBox">
+          <p class="short-explain">
+            The QR code will contain a short link instead of the address itself, so you
+            can point it somewhere new without reprinting it. It works for as long as
+            the link stays published.
+          </p>
+          <div class="actions">
+            <button type="button" id="makeShortBtn">Create short link</button>
+          </div>
+          <p class="status" id="shortStatus"></p>
+        </div>
       </div>
 
       <!-- Text -->
@@ -245,13 +262,16 @@
     </section>
   </main>
 
-  <footer class="footer">OMQ QR Studio</footer>
+  <footer class="footer">
+    OMQ QR Studio · <a href="links.html">Link manager</a>
+  </footer>
 
   <!-- Mobile-only action bar -->
   <div class="mobile-bar" id="mobileBar">
     <button id="mobileSaveBtn">Save QR</button>
   </div>
 
+  <script src="gh.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

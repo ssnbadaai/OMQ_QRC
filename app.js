@@ -9,6 +9,10 @@ const PREVIEW_SIZE = 280;
 let activeType = 'url';
 let logoDataUrl = null;
 
+/* Short link currently encoded in the QR, and the destination it was made for. */
+let shortLink = null;
+let shortLinkFor = null;
+
 /* ---------- QR instance (preview) ---------- */
 const qr = new QRCodeStyling(buildOptions(PREVIEW_SIZE));
 qr.append($('qrPreview'));
@@ -20,7 +24,10 @@ function buildData() {
   switch (activeType) {
     case 'url': {
       const v = $('urlInput').value.trim();
-      return v && v !== 'https://' ? v : '';
+      if (!v || v === 'https://') return '';
+      /* A short link only stands in for the address it was created for. */
+      if (shortLink && shortLinkFor === v) return shortLink;
+      return v;
     }
     case 'text':
       return $('textInput').value.trim();
@@ -165,6 +172,84 @@ $('qrMargin').addEventListener('input', () => {
 $('logoSize').addEventListener('input', () => {
   $('logoSizeVal').textContent = $('logoSize').value + '%';
 });
+
+/* ============================================================
+   Short links — stored in the repo, so they keep working as long
+   as the site is published. Creating one requires an admin token.
+   ============================================================ */
+const GH = window.OMQ_GH;
+
+function clearShortLink() {
+  shortLink = null;
+  shortLinkFor = null;
+  $('makeShortBtn').disabled = false;
+  $('makeShortBtn').textContent = 'Create short link';
+}
+
+$('useShortLink').addEventListener('change', () => {
+  const on = $('useShortLink').checked;
+  $('shortBox').classList.toggle('hidden', !on);
+
+  if (!on) {
+    clearShortLink();
+    $('shortStatus').textContent = '';
+    refresh();
+    return;
+  }
+
+  if (!GH.getToken()) {
+    $('shortStatus').innerHTML =
+      'Creating short links needs admin access. <a href="links.html">Sign in to the link manager</a>, then come back.';
+    $('makeShortBtn').disabled = true;
+  } else {
+    $('shortStatus').textContent = '';
+    $('makeShortBtn').disabled = false;
+  }
+});
+
+/* Editing the address invalidates a short link made for the old one. */
+$('urlInput').addEventListener('input', () => {
+  if (shortLink && shortLinkFor !== $('urlInput').value.trim()) {
+    clearShortLink();
+    $('shortStatus').textContent = 'Address changed — create a new short link for it.';
+  }
+});
+
+$('makeShortBtn').addEventListener('click', async () => {
+  const btn = $('makeShortBtn');
+  const status = $('shortStatus');
+  const raw = $('urlInput').value.trim();
+
+  try {
+    const destination = GH.normalizeUrl(raw);
+    btn.disabled = true;
+    btn.textContent = 'Creating…';
+
+    const { links, sha } = await GH.loadLinks();
+    const code = GH.makeCode(links);
+    links[code] = { url: destination, label: '', created: new Date().toISOString() };
+    await GH.saveLinks(links, sha, `Add short link /${code}`);
+
+    shortLink = GH.shortUrl(code);
+    shortLinkFor = raw;
+    btn.textContent = '✓ Short link created';
+
+    status.innerHTML =
+      `QR now points at <b>${shortLink.replace(/^https?:\/\//, '')}</b> — ` +
+      `live in about a minute. <a href="links.html">Change its destination</a> any time.`;
+    refresh();
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = 'Create short link';
+    status.textContent = '⚠ ' + err.message;
+  }
+});
+
+/* Arriving from the link manager with a URL to encode. */
+const presetUrl = new URLSearchParams(location.search).get('url');
+if (presetUrl) {
+  $('urlInput').value = presetUrl;
+}
 
 /* ---------- Built-in OMQ logo toggle ---------- */
 let omqLogoPromise = null;
