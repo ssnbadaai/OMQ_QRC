@@ -71,14 +71,17 @@ body {
   gap: 20px;
 }
 
+/* Icon and name only — the whole card is the link, so it needs no
+   caption or call to action to explain itself. */
 .hub-card {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  text-align: center;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 28px;
+  padding: 40px 28px;
   color: inherit;
   text-decoration: none;
   transition: border-color 0.15s, transform 0.15s;
@@ -89,28 +92,21 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 60px;
-  height: 60px;
-  border-radius: 14px;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
   background: var(--panel-2);
   color: var(--accent-hover);
   margin-bottom: 18px;
 }
 
-.hub-card h2 { margin: 0 0 10px; font-size: 19px; }
-.hub-card p {
-  margin: 0 0 20px;
-  color: var(--muted);
-  font-size: 14px;
-  line-height: 1.65;
-}
-.hub-go { margin-top: auto; color: var(--accent-hover); font-size: 14px; font-weight: 600; }
+.hub-card h2 { margin: 0; font-size: 19px; }
 
 @media (max-width: 720px) {
   .hub { padding: 28px 16px 32px; }
   .hub-title { font-size: 21px; margin-bottom: 20px; }
-  .hub-card { padding: 22px; }
-  .hub-icon { width: 50px; height: 50px; margin-bottom: 14px; }
+  .hub-card { padding: 28px 22px; }
+  .hub-icon { width: 54px; height: 54px; margin-bottom: 14px; }
 }
 
 /* ---------- Layout ---------- */

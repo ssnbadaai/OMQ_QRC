@@ -1,7 +1,7 @@
 <?php
 /* ============================================================
    OMQ Short Links — config, database, validation.
-   Shared by api.php (the admin API) and index.php (the redirect).
+   Shared by api.php (the admin API) and redirect.php.
    ============================================================ */
 
 declare(strict_types=1);
@@ -63,7 +63,8 @@ function omq_db(): PDO
             `hits`        INT UNSIGNED NOT NULL DEFAULT 0,
             `last_hit_at` DATETIME         NULL DEFAULT NULL,
             PRIMARY KEY (`code`),
-            KEY `created_at` (`created_at`)
+            KEY `created_at` (`created_at`),
+            KEY `created_by` (`created_by`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
     );
 

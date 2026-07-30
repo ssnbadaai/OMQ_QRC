@@ -85,11 +85,14 @@ try {
         }
 
         case 'list': {
-            $rows = $pdo->query('SELECT * FROM `links` ORDER BY `created_at` DESC')->fetchAll();
+            $stmt = $pdo->prepare(
+                'SELECT * FROM `links` WHERE `created_by` = ? ORDER BY `created_at` DESC'
+            );
+            $stmt->execute([$user['email']]);
             omq_send([
                 'user'  => $user,
                 'base'  => $base,
-                'links' => array_map(static fn(array $r): array => omq_row($r, $base), $rows),
+                'links' => array_map(static fn(array $r): array => omq_row($r, $base), $stmt->fetchAll()),
             ]);
         }
 
@@ -117,8 +120,8 @@ try {
                 throw $e;
             }
 
-            $stmt = $pdo->prepare('SELECT * FROM `links` WHERE `code` = ?');
-            $stmt->execute([$code]);
+            $stmt = $pdo->prepare('SELECT * FROM `links` WHERE `code` = ? AND `created_by` = ?');
+            $stmt->execute([$code, $user['email']]);
             omq_send(['link' => omq_row($stmt->fetch(), $base)]);
         }
 
@@ -145,30 +148,39 @@ try {
             $sets[] = '`updated_by` = ?';
             $args[] = $user['email'];
             $args[] = $code;
+            $args[] = $user['email'];
 
-            $stmt = $pdo->prepare('UPDATE `links` SET ' . implode(', ', $sets) . ' WHERE `code` = ?');
+            /* Ownership is enforced in the WHERE clause, not by having
+               listed the link earlier: codes are short and public, so
+               anyone could name one they do not own. */
+            $stmt = $pdo->prepare(
+                'UPDATE `links` SET ' . implode(', ', $sets) . ' WHERE `code` = ? AND `created_by` = ?'
+            );
             $stmt->execute($args);
-            if ($stmt->rowCount() === 0) {
-                $check = $pdo->prepare('SELECT 1 FROM `links` WHERE `code` = ?');
-                $check->execute([$code]);
-                if (!$check->fetchColumn()) {
-                    omq_fail(404, "There is no link \"$code\".");
-                }
-            }
 
-            $stmt = $pdo->prepare('SELECT * FROM `links` WHERE `code` = ?');
-            $stmt->execute([$code]);
-            omq_send(['link' => omq_row($stmt->fetch(), $base)]);
+            /* MySQL reports 0 affected rows when the new values match
+               the old ones, so a miss here is not proof of absence —
+               look the row up before deciding. */
+            $stmt = $pdo->prepare('SELECT * FROM `links` WHERE `code` = ? AND `created_by` = ?');
+            $stmt->execute([$code, $user['email']]);
+            $row = $stmt->fetch();
+            if (!$row) {
+                /* Same answer whether it belongs to someone else or does
+                   not exist — otherwise this doubles as a way to probe
+                   which codes are taken. */
+                omq_fail(404, "You have no link \"$code\".");
+            }
+            omq_send(['link' => omq_row($row, $base)]);
         }
 
         case 'delete': {
             $body = omq_body();
             $code = omq_validate_code((string) ($body['code'] ?? ''));
 
-            $stmt = $pdo->prepare('DELETE FROM `links` WHERE `code` = ?');
-            $stmt->execute([$code]);
+            $stmt = $pdo->prepare('DELETE FROM `links` WHERE `code` = ? AND `created_by` = ?');
+            $stmt->execute([$code, $user['email']]);
             if ($stmt->rowCount() === 0) {
-                omq_fail(404, "There is no link \"$code\".");
+                omq_fail(404, "You have no link \"$code\".");
             }
             omq_send(['deleted' => $code]);
         }

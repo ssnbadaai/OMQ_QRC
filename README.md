@@ -48,11 +48,21 @@ Redirects are **302, never 301**. A 301 is cached by browsers indefinitely, so
 re-pointing a link would never reach anyone who had already followed it — which
 is the entire reason these links exist.
 
-Anyone with an `@omqpro.com` Google account can create and manage links. No
-tokens to issue, no passwords to keep: access is granted and revoked by adding
-or removing the Google account. The domain test uses the `hd` claim, which only
+Anyone with an `@omqpro.com` Google account can create links. No tokens to
+issue, no passwords to keep: access is granted and revoked by adding or
+removing the Google account. The domain test uses the `hd` claim, which only
 Workspace accounts carry, so a personal account with a similar address cannot
 get in.
+
+**Links are private to the person who made them.** Each account lists, edits
+and deletes only its own. Ownership is enforced in the `WHERE` clause of every
+query, not by what the UI chose to show — codes are short and public, so anyone
+could name one they do not own. A link that is not yours reads as not existing,
+so the API cannot double as a way to probe which codes are taken.
+
+The redirect itself is deliberately not scoped: a short link has to resolve for
+whoever scans it. Codes also share one namespace, so a custom code already
+taken by someone else is refused.
 
 Scans are counted per link and shown in the list.
 
