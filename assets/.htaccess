@@ -1,0 +1,28 @@
+# Uploaded brand files live here. Nothing in this folder may ever run.
+
+Options -Indexes -ExecCGI
+
+# Belt and braces against an executable slipping past the extension
+# whitelist in assets.php: even if one were stored, it is not served
+# and not handed to an interpreter.
+<IfModule mod_authz_core.c>
+  <FilesMatch "\.(php|phps|phtml|phar|pl|py|cgi|sh|htaccess)$">
+    Require all denied
+  </FilesMatch>
+</IfModule>
+
+RemoveHandler .php .phtml .phar .cgi .pl .py
+RemoveType .php .phtml .phar
+AddType text/plain .php .phtml .phar
+
+<IfModule mod_headers.c>
+  # Never let the browser second-guess a stored file's type.
+  Header set X-Content-Type-Options "nosniff"
+
+  # SVG is a document format and can carry script. These are served from
+  # our own origin, so an unguarded one would be same-origin XSS. The CSP
+  # lets it render but denies it script, network and embedding.
+  <FilesMatch "\.svg$">
+    Header set Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'; img-src data:"
+  </FilesMatch>
+</IfModule>

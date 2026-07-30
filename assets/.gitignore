@@ -1,0 +1,5 @@
+# Uploaded brand files belong to the running site, not to the repository.
+# The folder itself is tracked so a fresh deployment has somewhere to write.
+*
+!.gitignore
+!.htaccess

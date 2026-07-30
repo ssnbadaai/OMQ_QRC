@@ -9,6 +9,7 @@
 
 (function (global) {
   const API_BASE = 'api.php';
+  const ASSET_BASE = 'assets.php';
   const TOKEN_KEY = 'omq-google-token';
 
   let onSignedIn = null;
@@ -149,8 +150,10 @@
     });
   }
 
-  /* ---------- API ---------- */
-  async function call(action, body, method) {
+  /* ---------- API ----------
+     `form` carries a FormData for uploads. Its Content-Type must be left
+     unset so the browser can add the multipart boundary. */
+  async function call(action, body, { base = API_BASE, form = null } = {}) {
     const saved = readStored();
     if (!saved) {
       const err = new Error('Sign in to continue.');
@@ -160,17 +163,17 @@
 
     let res;
     try {
-      res = await fetch(`${API_BASE}?action=${encodeURIComponent(action)}`, {
+      res = await fetch(`${base}?action=${encodeURIComponent(action)}`, {
         /* Same-origin: no credentials mode to set, no preflight. */
-        method: method || (body ? 'POST' : 'GET'),
+        method: form || body ? 'POST' : 'GET',
         headers: {
           Authorization: 'Bearer ' + saved.token,
           ...(body ? { 'Content-Type': 'application/json' } : {}),
         },
-        body: body ? JSON.stringify(body) : undefined,
+        body: form || (body ? JSON.stringify(body) : undefined),
       });
     } catch {
-      throw new Error('Could not reach the short link server.');
+      throw new Error('Could not reach the server.');
     }
 
     let data = {};
@@ -253,6 +256,14 @@
     create: (link) => call('create', link),
     update: (link) => call('update', link),
     remove: (code) => call('delete', { code }),
+
+    /* Brand Kit — shared across the team, unlike links. */
+    assets: {
+      list: () => call('list', null, { base: ASSET_BASE }),
+      colour: (c) => call('colour', c, { base: ASSET_BASE }),
+      upload: (form) => call('upload', null, { base: ASSET_BASE, form }),
+      remove: (id) => call('delete', { id }, { base: ASSET_BASE }),
+    },
 
     normalizeUrl,
     validateCode,

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1220" />
+  <meta name="robots" content="noindex" />
+  <title>OMQ Image Tools</title>
+  <link rel="icon" href="IMG/omq-logo.png" />
+  <link rel="apple-touch-icon" href="IMG/omq-logo.png" />
+  <link rel="stylesheet" href="styles.css?v=4" />
+</head>
+<body>
+
+  <header class="topbar">
+    <a class="brand" href="dev.html">
+      <img src="IMG/omq-logo.png" alt="OMQ" class="brand-logo" />
+      <span class="brand-name">OMQ <b>Image Tools</b></span>
+    </a>
+    <div class="topbar-right">
+      <span class="who hidden" id="whoami"></span>
+      <a class="topbar-link" href="dev.html">Dev Tools →</a>
+    </div>
+  </header>
+
+  <main class="admin-wrap wide">
+
+    <!-- ============ SOURCE ============ -->
+    <section class="panel">
+      <h2>Image or video</h2>
+
+      <label class="file-label" id="dropZone">
+        <input type="file" id="sourceFile" accept="image/*,video/*" />
+        <span id="sourceText">Choose an image or video — or drop one here</span>
+      </label>
+
+      <div class="hidden" id="stage">
+        <div class="stage-frame">
+          <img id="sourceImg" class="hidden" alt="" />
+          <video id="sourceVideo" class="hidden" controls playsinline muted></video>
+        </div>
+        <p class="muted-copy" id="frameHint"></p>
+      </div>
+
+      <p class="status" id="sourceStatus">Nothing loaded yet.</p>
+    </section>
+
+    <!-- ============ PALETTE ============ -->
+    <section class="panel hidden" id="palettePanel">
+      <div class="admin-header">
+        <h2>Colour palette</h2>
+        <button class="ghost" id="recomputeBtn">Re-read frame</button>
+      </div>
+
+      <div class="field-row">
+        <label>Colours
+          <input type="range" id="swatchCount" min="3" max="12" step="1" value="6" />
+          <span class="range-val" id="swatchCountVal">6</span>
+        </label>
+      </div>
+
+      <div class="swatches" id="swatches"></div>
+
+      <div class="actions">
+        <button class="secondary" id="copyAllBtn">Copy all hex</button>
+        <button class="secondary hidden" id="saveToBrandBtn">Save to Brand Kit</button>
+      </div>
+      <p class="status" id="paletteStatus"></p>
+    </section>
+
+    <!-- ============ FONT ============ -->
+    <section class="panel hidden" id="fontPanel">
+      <h2>Font</h2>
+
+      <p class="muted-copy">
+        Compare the lettering in your image against the fonts in the Brand Kit.
+        Type the same words, match the size, and see which one lines up.
+      </p>
+
+      <label>Sample text
+        <input type="text" id="sampleText" value="Handgloves 123" />
+      </label>
+
+      <div class="field-row">
+        <label>Size
+          <input type="range" id="sampleSize" min="16" max="96" step="1" value="40" />
+          <span class="range-val" id="sampleSizeVal">40 px</span>
+        </label>
+      </div>
+
+      <div id="fontSamples"></div>
+      <p class="status" id="fontStatus"></p>
+
+      <details class="how-to">
+        <summary>It is not one of ours — what now?</summary>
+        <p class="muted-copy">
+          Identifying an arbitrary font from a picture takes a model trained on
+          a large font corpus, which is not something this page can do. Crop
+          tightly to a word on a plain background, then run that crop through
+          a dedicated service such as
+          <a href="https://www.myfonts.com/pages/whatthefont" target="_blank"
+             rel="noopener noreferrer">WhatTheFont</a> or
+          <a href="https://www.fontsquirrel.com/matcherator" target="_blank"
+             rel="noopener noreferrer">Font Squirrel Matcherator</a>.
+          Once you know it, add it here so nobody has to ask twice.
+        </p>
+        <div class="actions">
+          <button class="secondary" id="cropBtn">Download a crop to upload</button>
+        </div>
+      </details>
+    </section>
+
+    <!-- ============ SIGN IN (only for Brand Kit features) ============ -->
+    <section class="panel" id="signInPanel">
+      <p class="muted-copy">
+        Palette extraction works without signing in. Continue with your
+        <b id="domainName">omqpro.com</b> account to compare against the Brand
+        Kit fonts and to save colours into it.
+      </p>
+      <div class="google-slot" id="googleBtn"></div>
+      <p class="status" id="signInStatus"></p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    OMQ Image Tools · <a href="dev.html">Dev Tools</a> · <a href="index.html">Home</a>
+  </footer>
+
+  <script src="api.js?v=4"></script>
+  <script src="image.js?v=4"></script>
+</body>
+</html>

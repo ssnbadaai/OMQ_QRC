@@ -83,6 +83,9 @@ const OMQ_RESERVED = [
     'auth', 'lib', 'config', 'redirect', 'schema', 'styles', 'app',
     'admin', 'assets', 'img', 'css', 'js', 'robots', 'favicon',
     'sitemap', 'readme', 'login', 'logout',
+    /* Dev tools */
+    'dev', 'tools', 'brand', 'image', 'images', 'font', 'fonts',
+    'colour', 'colours', 'color', 'colors', 'icon', 'icons', 'palette',
 ];
 
 /* Ambiguous glyphs are left out so a code survives being read aloud
