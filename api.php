@@ -77,6 +77,13 @@ $now  = gmdate('Y-m-d H:i:s');
 
 try {
     switch ($action) {
+        /* Cheapest way to ask "will this account be allowed?". Holding a
+           Google token is not the same as being permitted here, and the
+           difference should surface at sign-in, not on the first write. */
+        case 'me': {
+            omq_send(['user' => $user, 'base' => $base]);
+        }
+
         case 'list': {
             $rows = $pdo->query('SELECT * FROM `links` ORDER BY `created_at` DESC')->fetchAll();
             omq_send([

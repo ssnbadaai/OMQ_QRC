@@ -237,6 +237,14 @@
     isSignedIn,
     signOut,
 
+    /* Confirms the server will accept this account, without pulling
+       the whole link list down to find out. */
+    async me() {
+      const data = await call('me');
+      if (data.base) API.SHORT_BASE = data.base;
+      return data;
+    },
+
     async list() {
       const data = await call('list');
       if (data.base) API.SHORT_BASE = data.base;

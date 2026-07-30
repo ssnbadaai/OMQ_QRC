@@ -209,7 +209,7 @@ function showShortAuth() {
   if (googleMounted) return;
   googleMounted = true;
 
-  API.mountButton($('shortGoogleBtn'), { onSignIn: showShortAuth })
+  API.mountButton($('shortGoogleBtn'), { onSignIn: confirmShortAuth })
     .then(() => {
       /* Name the domain once the server has told us what it is. */
       if (!API.isSignedIn()) {
@@ -221,6 +221,20 @@ function showShortAuth() {
       googleMounted = false;
       $('shortStatus').textContent = '⚠ ' + err.message;
     });
+}
+
+/* Signing in with Google only proves who someone is. Whether this
+   server will accept them is a separate question, and they should hear
+   the answer now rather than after filling the form in. */
+async function confirmShortAuth() {
+  try {
+    await API.me();
+    showShortAuth();
+  } catch (err) {
+    API.signOut();
+    showShortAuth();
+    $('shortStatus').textContent = '⚠ ' + err.message;
+  }
 }
 
 $('useShortLink').addEventListener('change', () => {
