@@ -70,6 +70,8 @@ if ($action === 'config') {
     exit;
 }
 
+omq_ensure_schema();
+
 $user = omq_require_user();
 $pdo  = omq_db();
 $base = $config['short_base'];
@@ -192,5 +194,5 @@ try {
     omq_fail(422, $e->getMessage());
 } catch (PDOException $e) {
     error_log('OMQ short links: ' . $e->getMessage());
-    omq_fail(500, 'The database refused that. Try again.');
+    omq_fail(500, 'The database refused that. The server error log has the detail.');
 }

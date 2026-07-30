@@ -51,6 +51,26 @@ function omq_db(): PDO
         omq_fail(500, 'Could not reach the database.');
     }
 
+    return $pdo;
+}
+
+/* Creates any table that is missing, so a deployment works without
+   anyone importing schema.sql by hand.
+
+   Called by the two admin endpoints only — never by redirect.php. That
+   runs on every public scan, and re-checking the schema on the hot path
+   would buy nothing: if a table is missing the redirect has nothing to
+   serve anyway. */
+function omq_ensure_schema(): void
+{
+    static $done = false;
+    if ($done) {
+        return;
+    }
+    $done = true;
+
+    $pdo = omq_db();
+
     $pdo->exec(
         'CREATE TABLE IF NOT EXISTS `links` (
             `code`        VARCHAR(64)  NOT NULL,
@@ -68,7 +88,23 @@ function omq_db(): PDO
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
     );
 
-    return $pdo;
+    $pdo->exec(
+        'CREATE TABLE IF NOT EXISTS `assets` (
+            `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `kind`       VARCHAR(16)  NOT NULL,
+            `name`       VARCHAR(160) NOT NULL,
+            `value`      VARCHAR(64)  NOT NULL DEFAULT \'\',
+            `file`       VARCHAR(160) NOT NULL DEFAULT \'\',
+            `original`   VARCHAR(200) NOT NULL DEFAULT \'\',
+            `mime`       VARCHAR(100) NOT NULL DEFAULT \'\',
+            `bytes`      INT UNSIGNED NOT NULL DEFAULT 0,
+            `notes`      VARCHAR(255) NOT NULL DEFAULT \'\',
+            `created_at` DATETIME     NOT NULL,
+            `created_by` VARCHAR(255) NOT NULL DEFAULT \'\',
+            PRIMARY KEY (`id`),
+            KEY `kind` (`kind`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
 }
 
 /* ---------- validation ---------- */

@@ -68,6 +68,8 @@ function omq_asset_row(array $r): array
     ];
 }
 
+omq_ensure_schema();
+
 $user   = omq_require_user();
 $pdo    = omq_db();
 $action = $_GET['action'] ?? '';
@@ -212,5 +214,5 @@ try {
     omq_fail(422, $e->getMessage());
 } catch (PDOException $e) {
     error_log('OMQ brand kit: ' . $e->getMessage());
-    omq_fail(500, 'The database refused that. Try again.');
+    omq_fail(500, 'The database refused that. The server error log has the detail.');
 }
