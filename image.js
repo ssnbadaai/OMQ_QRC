@@ -350,8 +350,8 @@ $('cropBtn').addEventListener('click', () => {
 });
 
 /* ============================================================
-   Sign-in — optional here, and shared with every other tool.
-   Palette extraction needs nobody's permission; the Brand Kit parts do.
+   Session — optional. Palette extraction needs nobody's permission;
+   the Brand Kit parts do.
    ============================================================ */
 async function loadBrandFonts() {
   const data = await API.assets.list();
@@ -359,12 +359,8 @@ async function loadBrandFonts() {
   renderFontSamples();
 }
 
-API.mountSession({
-  gate: $('authGate'),
+API.optionalSession({
   account: $('authAccount'),
-  blurb: (domain) =>
-    `Palette extraction works without signing in. Continue with your ${domain} ` +
-    'account to compare against the Brand Kit fonts and to save colours into it.',
   onIn: async () => {
     $('signInPanel').classList.add('hidden');
     $('saveToBrandBtn').classList.remove('hidden');
@@ -379,6 +375,8 @@ API.mountSession({
     renderFontSamples();
     $('signInPanel').classList.remove('hidden');
     $('saveToBrandBtn').classList.add('hidden');
+    /* Carry the way back, so signing in returns to this page. */
+    $('signInLink').href = API.loginUrl();
   },
 });
 

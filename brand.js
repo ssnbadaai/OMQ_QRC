@@ -43,7 +43,7 @@ const isImage = (a) => /\.(svg|png|jpe?g|webp)$/i.test(a.url);
 
 function handle(err, statusEl) {
   if (err && err.status === 401) {
-    showSignedOut();
+    location.replace(API.loginUrl());
     return;
   }
   say(statusEl, '⚠ ' + err.message, 'warn');
@@ -58,38 +58,18 @@ async function copy(text, statusEl) {
   }
 }
 
-/* ---------- sign in ----------
-   Shared with every other tool; api.js owns the card and the chip. */
+/* ---------- session ---------- */
 $('addBtn').dataset.label = $('addBtn').textContent;
 
-function showSignedIn() {
-  $('signInPanel').classList.add('hidden');
-  $('libraryPanel').classList.remove('hidden');
-  $('addPanel').classList.remove('hidden');
-}
-
-function showSignedOut() {
-  assets = [];
-  $('signInPanel').classList.remove('hidden');
-  $('libraryPanel').classList.add('hidden');
-  $('addPanel').classList.add('hidden');
-}
-
-API.mountSession({
-  gate: $('authGate'),
+API.requireSession({
   account: $('authAccount'),
-  blurb: (domain) =>
-    `The brand library is shared by everyone with a ${domain} Google account, ` +
-    'so the whole team works from the same approved files.',
   onIn: async () => {
     try {
       await refresh();
-      showSignedIn();
     } catch (err) {
       say($('listStatus'), '⚠ ' + err.message, 'warn');
     }
   },
-  onOut: showSignedOut,
 });
 
 /* ---------- load ---------- */

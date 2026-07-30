@@ -58,8 +58,9 @@ cPanel → **MySQL Databases**:
 2. Create a user, e.g. `links`, with a generated password. Keep it.
 3. Add the user to the database with **All Privileges**.
 
-The table is created on first use. To do it up front, import
-[`schema.sql`](schema.sql) in phpMyAdmin.
+The tables are created on first use — there is nothing to import.
+`lib.php` holds the only definition of the schema and applies it on
+demand.
 
 ## 5. SSL
 
@@ -148,7 +149,8 @@ needs, so nothing in the repo has to be edited on the server — which is why
 | `/api.php?action=list` | `{"error":"Sign in to continue."}` |
 | `/config.php` | **403** — if you see PHP or a blank page, stop and fix `.htaccess` |
 | `/nope` | the styled "Link not found" page |
-| Continue with Google on `/short.html` | the shorten form appears |
+| `/short.html` signed out | redirects to `/login.html` |
+| Continue with Google there | returns you to `/short.html`, signed in |
 | Shorten something, open the short link | lands on the destination |
 
 ## Updating later

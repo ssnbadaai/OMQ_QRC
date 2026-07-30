@@ -38,48 +38,30 @@ async function copy(text, statusEl) {
 /* A rejected token means the hour is up — drop back to the sign-in
    screen instead of showing an error the user cannot act on. */
 function handle(err, statusEl) {
+  /* The hour is up. Back to the one login screen, and back here after. */
   if (err && err.status === 401) {
-    showSignedOut();
+    location.replace(API.loginUrl());
     return;
   }
   say(statusEl, '⚠ ' + err.message, 'warn');
 }
 
-/* ---------- sign in ----------
-   One session for the whole site: api.js draws the same card, runs the
-   same check and shows the same account chip on every tool. */
+/* ---------- session ----------
+   No gate here: api.js sends anyone signed out to login.html and
+   brings them back. */
 $('createBtn').dataset.label = $('createBtn').textContent;
 
-function showSignedIn() {
-  $('signInPanel').classList.add('hidden');
-  $('shortenPanel').classList.remove('hidden');
-  $('listPanel').classList.remove('hidden');
-  $('destInput').focus();
-}
-
-function showSignedOut() {
-  links = [];
-  $('signInPanel').classList.remove('hidden');
-  $('shortenPanel').classList.add('hidden');
-  $('listPanel').classList.add('hidden');
-  $('resultCard').classList.add('hidden');
-}
-
-API.mountSession({
-  gate: $('authGate'),
+API.requireSession({
   account: $('authAccount'),
-  blurb: (domain) =>
-    `Continue with your ${domain} Google account to create and manage short links.`,
   onIn: async () => {
     $('basePrefix').textContent = bare(API.SHORT_BASE);
     try {
       await refresh();
-      showSignedIn();
+      $('destInput').focus();
     } catch (err) {
       say($('createStatus'), '⚠ ' + err.message, 'warn');
     }
   },
-  onOut: showSignedOut,
 });
 
 /* ---------- load ---------- */
@@ -290,7 +272,3 @@ function render() {
     list.appendChild(row);
   });
 }
-
-/* ---------- init ----------
-   mountSession restores the session if there is one, so there is
-   nothing to do here. */

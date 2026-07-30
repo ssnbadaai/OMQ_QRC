@@ -14,7 +14,7 @@ Options -Indexes
   <Files "config.php">
     Require all denied
   </Files>
-  # Source, schema and docs — readable in the repo, not over HTTP.
+  # Source and docs — readable in the repo, not over HTTP.
   <FilesMatch "\.(sql|md|example\.php)$">
     Require all denied
   </FilesMatch>

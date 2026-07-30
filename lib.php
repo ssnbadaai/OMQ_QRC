@@ -54,8 +54,13 @@ function omq_db(): PDO
     return $pdo;
 }
 
-/* Creates any table that is missing, so a deployment works without
-   anyone importing schema.sql by hand.
+/* The single definition of the schema, applied on demand, so a
+   deployment needs no manual import step.
+
+   There was a schema.sql saying the same thing in SQL. Two copies drift,
+   and this pair already did: `assets` was added to that file and not to
+   this one, so the Brand Kit reached a table that had never been
+   created. One definition, in the code that depends on it.
 
    Called by the two admin endpoints only — never by redirect.php. That
    runs on every public scan, and re-checking the schema on the hot path

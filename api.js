@@ -202,13 +202,11 @@
   }
 
   /* ============================================================
-     One session for the whole site.
+     One login for the whole site.
 
-     The token lives in localStorage under a single key, so signing in
-     on any tool signs you into all of them — there was never a second
-     login to build, only the same screen repeated four times. This
-     renders that screen once, so every tool gets identical wording,
-     identical validation, and an identical account chip.
+     Every tool that needs an account sends you to login.html and is
+     returned where you were. One screen, one place to change the
+     wording, and no tool has to know how signing in works.
      ============================================================ */
 
   function verify() {
@@ -221,6 +219,31 @@
     return verified;
   }
 
+  /* Where to come back to. Same-origin relative paths only: `next` is
+     attacker-controllable, and handing it to location without checking
+     is how a login page becomes an open redirect. */
+  function safeNext(raw, fallback = 'index.html') {
+    if (!raw) return fallback;
+    let url;
+    try {
+      url = new URL(raw, location.origin);
+    } catch {
+      return fallback;
+    }
+    /* Catches //evil.com, https://evil.com and javascript: alike —
+       each resolves to an origin that is not ours. */
+    if (url.origin !== location.origin) return fallback;
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return fallback;
+    return url.pathname.replace(/^\//, '') + url.search || fallback;
+  }
+
+  function loginUrl(why) {
+    const here = location.pathname.replace(/^\//, '') + location.search;
+    let to = 'login.html?next=' + encodeURIComponent(here || 'index.html');
+    if (why) to += '&why=' + encodeURIComponent(why);
+    return to;
+  }
+
   function el(tag, className, text) {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -228,83 +251,94 @@
     return node;
   }
 
-  /**
-   * Wire a page to the shared session.
-   *
-   *   gate      element the sign-in card is drawn into
-   *   account   element the email + Sign out chip is drawn into
-   *   blurb     one line explaining what signing in unlocks here
-   *   onIn      called with the verified user
-   *   onOut     called when signed out, or refused by the server
-   */
-  async function mountSession({ gate, account, blurb, onIn, onOut } = {}) {
+  /* The account chip: who you are and a way out, or a way in. */
+  function mountAccount(host) {
+    if (!host) return;
+    host.innerHTML = '';
+
+    const user = getUser();
+    if (!user) {
+      const link = el('a', 'topbar-link', 'Sign in');
+      link.href = loginUrl();
+      host.appendChild(link);
+      return;
+    }
+
+    const out = el('button', 'ghost', 'Sign out');
+    out.addEventListener('click', () => {
+      signOut();
+      /* Reloading re-runs whichever guard this page uses, so a page
+         that needs an account lands back on login by itself. */
+      location.reload();
+    });
+    host.append(el('span', 'who', user.email), out);
+  }
+
+  /* For tools that cannot work signed out. Redirects rather than
+     rendering a gate, so there is only ever one login screen. */
+  async function requireSession({ account, onIn } = {}) {
     await loadConfig();
 
-    const card = el('div', 'gate');
-    const status = el('p', 'status');
-    const slot = el('div', 'google-slot');
-    /* A function, because the domain is only known once config lands —
-       later than the caller can write a sentence containing it. */
-    const line = typeof blurb === 'function' ? blurb(API.ALLOWED_DOMAIN) : blurb;
-    card.append(
-      el('p', 'muted-copy', line || `Continue with your ${API.ALLOWED_DOMAIN} Google account.`),
-      slot,
-      status
-    );
-
-    if (gate) {
-      gate.innerHTML = '';
-      gate.appendChild(card);
+    if (!isSignedIn()) {
+      location.replace(loginUrl());
+      return;
     }
-
-    function paint(signedIn) {
-      card.classList.toggle('hidden', signedIn);
-      if (!account) return;
-
-      account.innerHTML = '';
-      const user = getUser();
-      if (!signedIn || !user) return;
-
-      const out = el('button', 'ghost', 'Sign out');
-      /* signOut() fires the onSignedOut callback below, which does the
-         repainting — so this only has to ask. */
-      out.addEventListener('click', signOut);
-      account.append(el('span', 'who', user.email), out);
+    try {
+      const { user } = await verify();
+      mountAccount(account);
+      if (onIn) onIn(user);
+    } catch (err) {
+      /* Signed in with Google, but this server will not have them —
+         say so on the login screen rather than here. */
+      signOut();
+      location.replace(loginUrl(err.message));
     }
+  }
 
-    async function accept() {
-      status.textContent = '';
-      status.className = 'status';
+  /* For tools that work signed out and simply do more when not. */
+  async function optionalSession({ account, onIn, onOut } = {}) {
+    await loadConfig();
+
+    if (isSignedIn()) {
       try {
         const { user } = await verify();
-        paint(true);
+        mountAccount(account);
         if (onIn) onIn(user);
+        return;
+      } catch {
+        signOut();
+      }
+    }
+    mountAccount(account);
+    if (onOut) onOut();
+  }
+
+  /* login.html itself. */
+  async function mountLogin({ slot, status, onDone } = {}) {
+    await loadConfig();
+
+    const params = new URLSearchParams(location.search);
+    const next = safeNext(params.get('next'));
+
+    const finish = async () => {
+      try {
+        await verify();
+        location.replace(next);
       } catch (err) {
-        /* Signed in with Google, but this server will not have them. */
         signOut();
         status.textContent = '⚠ ' + err.message;
         status.className = 'status status-warn';
+        if (onDone) onDone(false);
       }
-    }
+    };
 
-    function leave() {
-      verified = null;
-      paint(false);
-      if (onOut) onOut();
-    }
-
-    await mountButton(slot, { onSignIn: accept, onSignOut: leave });
-
+    /* Already signed in and still welcome — do not make them click. */
     if (isSignedIn()) {
-      await accept();
-    } else {
-      paint(false);
+      await finish();
     }
 
-    if (!API.GOOGLE_CLIENT_ID || API.GOOGLE_CLIENT_ID.startsWith('REPLACE_ME')) {
-      status.textContent = '⚠ Google sign-in is not configured yet (see config.php).';
-      status.className = 'status status-warn';
-    }
+    await mountButton(slot, { onSignIn: finish });
+    return next;
   }
 
   /* ---------- client-side validation ----------
@@ -349,7 +383,11 @@
 
     loadConfig,
     mountButton,
-    mountSession,
+    requireSession,
+    optionalSession,
+    mountLogin,
+    mountAccount,
+    loginUrl,
     getUser,
     isSignedIn,
     signOut,

@@ -1,6 +1,6 @@
 # OMQ Tools
 
-Two tools for OMQ, served from **qr.omqpro.com** on cPanel:
+Three tools for OMQ, served from **qr.omqpro.com** on cPanel:
 
 - **QR Studio** ([`qr.html`](qr.html)) — the QR code generator. Runs entirely
   in the browser; no accounts, no server involved.
@@ -11,6 +11,18 @@ Two tools for OMQ, served from **qr.omqpro.com** on cPanel:
   be added without the front page growing a card each time.
 
 [`index.html`](index.html) is the hub pointing at all three.
+
+## Signing in
+
+**There is one sign-in screen, [`login.html`](login.html).** Tools do not
+render their own; a tool that needs an account redirects there with `?next=`
+and api.js returns you where you were. `next` is validated as a same-origin
+relative path before use — an unchecked one turns a login page into an open
+redirect. Signing in once covers every tool, since the token is a single key in
+`localStorage`.
+
+QR generation and palette extraction need no account at all; only short links
+and the Brand Kit do, and those redirect rather than showing a gate.
 
 ## Dev Tools
 
@@ -110,13 +122,13 @@ Scans are counted per link and shown in the list.
 | `image.html`, `image.js` | Image Tools — palette and fonts |
 | `assets.php` | Brand Kit API — list / upload / colour / delete |
 | `assets/` | Uploaded brand files. Contents gitignored; the folder and its `.htaccess` are tracked |
-| `api.js` | Google sign-in + API client |
+| `login.html`, `login.js` | The one sign-in screen |
+| `api.js` | Session, Google sign-in, API client |
 | `api.php` | `config` (public) / me / list / create / update / delete |
 | `redirect.php` | The redirect itself |
 | `auth.php` | Google ID token verification |
 | `lib.php` | Config, database, validation |
 | `config.php` | Database password and client ID — **gitignored**, created on the server |
-| `schema.sql` | The `links` table |
 | `.htaccess` | Routing, and denying everything not meant to be served |
 | `styles.css` | Styles for every page |
 | `lib/` | [qr-code-styling](https://github.com/kozakdenys/qr-code-styling), vendored so the QR generator works offline |

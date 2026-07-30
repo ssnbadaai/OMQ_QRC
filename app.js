@@ -191,19 +191,20 @@ function clearShortLink() {
   $('makeShortBtn').textContent = 'Create short link';
 }
 
-/* The same session as every other tool — signing in on the shortener or
-   the Brand Kit means this box is already unlocked when you get here. */
-API.mountSession({
-  gate: $('authGate'),
+/* The same session as every other tool — signing in on the shortener
+   or the Brand Kit means this box is already unlocked when you get
+   here. Signed out, it offers the way to the one login screen. */
+API.optionalSession({
   account: $('authAccount'),
-  blurb: (domain) =>
-    `Continue with your ${domain} Google account to create a short link.`,
   onIn: () => {
     $('makeShortBtn').classList.remove('hidden');
+    $('shortSignIn').classList.add('hidden');
     $('shortStatus').textContent = '';
   },
   onOut: () => {
     $('makeShortBtn').classList.add('hidden');
+    $('shortSignIn').classList.remove('hidden');
+    $('shortSignInLink').href = API.loginUrl();
   },
 });
 
@@ -249,10 +250,11 @@ $('makeShortBtn').addEventListener('click', async () => {
   } catch (err) {
     btn.disabled = false;
     btn.textContent = 'Create short link';
-    status.textContent =
-      err.status === 401
-        ? 'Your sign-in expired — continue with Google again.'
-        : '⚠ ' + err.message;
+    if (err.status === 401) {
+      location.replace(API.loginUrl('Your sign-in expired.'));
+      return;
+    }
+    status.textContent = '⚠ ' + err.message;
   }
 });
 

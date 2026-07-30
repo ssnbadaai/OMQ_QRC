@@ -456,9 +456,6 @@ button.ghost:hover { color: #ff6b6b; border-color: #ff6b6b; }
   margin: 18px 0 4px;
 }
 
-.signin-panel { max-width: 520px; margin: 0 auto; text-align: center; }
-.signin-panel .muted-copy { margin: 0 auto; max-width: 44ch; }
-.signin-panel h2 { justify-content: center; }
 
 .short-box .google-slot { margin: 10px 0 2px; }
 
@@ -833,15 +830,51 @@ button.ghost:hover { color: #ff6b6b; border-color: #ff6b6b; }
   .stage-frame img, .stage-frame video { max-height: 300px; }
 }
 
-/* ---------- Shared session (api.js mountSession) ---------- */
-.gate { display: flex; flex-direction: column; align-items: center; text-align: center; }
-.gate .muted-copy { max-width: 46ch; margin: 0 auto; }
-.gate .status { margin-bottom: 0; }
-
+/* ---------- Account chip (api.js mountAccount) ---------- */
 .account { display: flex; align-items: center; gap: 10px; }
 .account .ghost { min-height: 34px; padding: 6px 12px; font-size: 13px; }
 
 @media (max-width: 720px) {
   /* The email is the first thing to go when the bar gets tight. */
   .account .who { display: none; }
+}
+
+/* ---------- Login (login.html) ---------- */
+.login-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 56px 20px;
+  min-height: calc(100vh - 200px);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 430px;
+  text-align: center;
+  padding: 36px 30px 28px;
+}
+
+.login-mark {
+  height: 52px;
+  width: 52px;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 12px;
+  padding: 5px;
+  margin-bottom: 18px;
+}
+
+.login-card h1 { margin: 0 0 10px; font-size: 22px; }
+.login-card .muted-copy { margin: 0 auto; max-width: 40ch; }
+.login-card .google-slot { margin: 22px 0 6px; }
+.login-card .status { margin-bottom: 0; }
+
+.login-back { margin: 22px 0 0; font-size: 13px; }
+.login-back a { color: var(--muted); text-decoration: none; }
+.login-back a:hover { color: var(--accent-hover); }
+
+@media (max-width: 720px) {
+  .login-wrap { padding: 28px 14px; min-height: 0; }
+  .login-card { padding: 28px 20px 22px; }
 }
