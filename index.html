@@ -6,272 +6,60 @@
   <meta name="theme-color" content="#0f1220" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>OMQ QR Studio</title>
+  <meta name="description" content="QR codes and short links for OMQ." />
+  <title>OMQ Tools</title>
   <link rel="icon" href="IMG/omq-logo.png" />
   <link rel="apple-touch-icon" href="IMG/omq-logo.png" />
-  <link rel="stylesheet" href="styles.css" />
-  <script src="lib/qr-code-styling.js"></script>
+  <link rel="stylesheet" href="styles.css?v=3" />
 </head>
 <body>
 
   <header class="topbar">
     <div class="brand">
       <img src="IMG/omq-logo.png" alt="OMQ" class="brand-logo" />
-      <span class="brand-name">OMQ <b>QR Studio</b></span>
+      <span class="brand-name">OMQ <b>Tools</b></span>
     </div>
   </header>
 
-  <main class="layout">
+  <main class="hub">
+    <h1 class="hub-title">What are you making?</h1>
 
-    <!-- ============ PREVIEW & EXPORT ============ -->
-    <section class="panel preview-panel">
-      <h2><span class="step">3</span> Preview &amp; Export</h2>
+    <div class="hub-cards">
 
-      <div class="preview-frame" id="qrPreview"></div>
-      <p class="status" id="statusText">Type something to see your QR code.</p>
-      <p class="ios-hint hidden" id="iosHint">
-        Press and hold the QR code above, then choose <b>Save to Photos</b>.
-      </p>
+      <a class="hub-card" href="qr.html">
+        <span class="hub-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="34" height="34" fill="currentColor">
+            <path d="M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zm8-2h3v3h-3v-3zm5 0h3v3h-3v-3zm-5 5h3v3h-3v-3zm5 0h3v3h-3v-3z"/>
+          </svg>
+        </span>
+        <h2>QR Studio</h2>
+        <p>
+          QR codes for a URL, Wi-Fi network, contact card and more. Choose the
+          shapes and colours, drop your logo in the middle, export up to 4096 px.
+        </p>
+        <span class="hub-go">Make a QR code →</span>
+      </a>
 
-      <div class="export-row">
-        <label>Export size
-          <select id="exportSize">
-            <option value="512">512 px</option>
-            <option value="1024" selected>1024 px</option>
-            <option value="2048">2048 px</option>
-            <option value="4096">4096 px</option>
-          </select>
-        </label>
-        <label>File name
-          <input type="text" id="fileName" placeholder="my-qr-code" />
-        </label>
-      </div>
+      <a class="hub-card" href="short.html">
+        <span class="hub-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="34" height="34" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M10 13a5 5 0 0 0 7.1.1l3-3a5 5 0 0 0-7.1-7.1L11.5 4.5"/>
+            <path d="M14 11a5 5 0 0 0-7.1-.1l-3 3a5 5 0 0 0 7.1 7.1l1.5-1.5"/>
+          </svg>
+        </span>
+        <h2>Short Links</h2>
+        <p>
+          Turn any long address into a short one you can change later. Works for
+          anything — email, print, social — not just QR codes.
+        </p>
+        <span class="hub-go">Shorten a link →</span>
+      </a>
 
-      <div class="actions" id="desktopActions">
-        <button id="downloadPng">Download PNG</button>
-        <button id="downloadSvg" class="secondary">SVG</button>
-        <button id="downloadJpeg" class="secondary">JPEG</button>
-      </div>
-    </section>
-
-    <!-- ============ CONTENT ============ -->
-    <section class="panel">
-      <h2><span class="step">1</span> Content</h2>
-
-      <div class="type-tabs" id="typeTabs">
-        <button class="tab active" data-type="url">URL</button>
-        <button class="tab" data-type="text">Text</button>
-        <button class="tab" data-type="wifi">Wi-Fi</button>
-        <button class="tab" data-type="email">Email</button>
-        <button class="tab" data-type="phone">Phone</button>
-        <button class="tab" data-type="sms">SMS</button>
-        <button class="tab" data-type="vcard">vCard</button>
-      </div>
-
-      <!-- URL -->
-      <div class="type-form active" data-form="url">
-        <label>Website URL
-          <input type="url" id="urlInput" inputmode="url" autocapitalize="off" autocorrect="off"
-                 spellcheck="false" placeholder="https://example.com" value="https://" />
-        </label>
-
-        <label class="checkbox-label short-toggle">
-          <input type="checkbox" id="useShortLink" />
-          Use a short link <span class="opt">destination editable later</span>
-        </label>
-
-        <div class="short-box hidden" id="shortBox">
-          <p class="short-explain">
-            The QR code will contain a short link instead of the address itself, so you
-            can point it somewhere new without reprinting it. It works for as long as
-            the link stays published.
-          </p>
-          <div class="actions">
-            <button type="button" id="makeShortBtn">Create short link</button>
-          </div>
-          <p class="status" id="shortStatus"></p>
-        </div>
-      </div>
-
-      <!-- Text -->
-      <div class="type-form" data-form="text">
-        <label>Plain text
-          <textarea id="textInput" rows="4" placeholder="Any text you want the QR to contain…"></textarea>
-        </label>
-      </div>
-
-      <!-- WiFi -->
-      <div class="type-form" data-form="wifi">
-        <label>Network name (SSID)
-          <input type="text" id="wifiSsid" autocapitalize="off" autocorrect="off" spellcheck="false"
-                 placeholder="MyNetwork" />
-        </label>
-        <label>Password
-          <input type="text" id="wifiPass" autocapitalize="off" autocorrect="off" spellcheck="false"
-                 placeholder="Password" />
-        </label>
-        <div class="field-row">
-          <label>Security
-            <select id="wifiType">
-              <option value="WPA">WPA / WPA2 / WPA3</option>
-              <option value="WEP">WEP</option>
-              <option value="nopass">No password</option>
-            </select>
-          </label>
-          <label class="checkbox-label">
-            <input type="checkbox" id="wifiHidden" /> Hidden network
-          </label>
-        </div>
-      </div>
-
-      <!-- Email -->
-      <div class="type-form" data-form="email">
-        <label>Email address
-          <input type="email" id="emailTo" inputmode="email" autocapitalize="off" autocorrect="off"
-                 spellcheck="false" placeholder="hello@example.com" />
-        </label>
-        <label>Subject
-          <input type="text" id="emailSubject" placeholder="Optional subject" />
-        </label>
-        <label>Message
-          <textarea id="emailBody" rows="3" placeholder="Optional message"></textarea>
-        </label>
-      </div>
-
-      <!-- Phone -->
-      <div class="type-form" data-form="phone">
-        <label>Phone number
-          <input type="tel" id="phoneNumber" inputmode="tel" placeholder="+1 555 000 0000" />
-        </label>
-      </div>
-
-      <!-- SMS -->
-      <div class="type-form" data-form="sms">
-        <label>Phone number
-          <input type="tel" id="smsNumber" inputmode="tel" placeholder="+1 555 000 0000" />
-        </label>
-        <label>Message
-          <textarea id="smsBody" rows="3" placeholder="Pre-filled message"></textarea>
-        </label>
-      </div>
-
-      <!-- vCard -->
-      <div class="type-form" data-form="vcard">
-        <div class="field-row">
-          <label>First name <input type="text" id="vcFirst" autocapitalize="words" /></label>
-          <label>Last name <input type="text" id="vcLast" autocapitalize="words" /></label>
-        </div>
-        <label>Organization <input type="text" id="vcOrg" autocapitalize="words" /></label>
-        <div class="field-row">
-          <label>Phone <input type="tel" id="vcPhone" inputmode="tel" /></label>
-          <label>Email <input type="email" id="vcEmail" inputmode="email" autocapitalize="off"
-                              autocorrect="off" spellcheck="false" /></label>
-        </div>
-        <label>Website <input type="url" id="vcUrl" inputmode="url" autocapitalize="off"
-                              autocorrect="off" spellcheck="false" placeholder="https://" /></label>
-      </div>
-    </section>
-
-    <!-- ============ CUSTOMIZATION ============ -->
-    <section class="panel">
-      <h2><span class="step">2</span> Customize</h2>
-
-      <h3>Shape</h3>
-      <div class="field-row">
-        <label>Dot style
-          <select id="dotStyle">
-            <option value="square">Square</option>
-            <option value="rounded" selected>Rounded</option>
-            <option value="dots">Dots</option>
-            <option value="classy">Classy</option>
-            <option value="classy-rounded">Classy rounded</option>
-            <option value="extra-rounded">Extra rounded</option>
-          </select>
-        </label>
-        <label>Corner frame
-          <select id="cornerSquareStyle">
-            <option value="square">Square</option>
-            <option value="extra-rounded" selected>Rounded</option>
-            <option value="dot">Dot</option>
-          </select>
-        </label>
-        <label>Corner dot
-          <select id="cornerDotStyle">
-            <option value="square">Square</option>
-            <option value="dot" selected>Dot</option>
-          </select>
-        </label>
-      </div>
-
-      <h3>Colors</h3>
-      <div class="field-row">
-        <label>Dots
-          <input type="color" id="fgColor" value="#1a1a2e" />
-        </label>
-        <label class="checkbox-label">
-          <input type="checkbox" id="useGradient" /> Gradient
-        </label>
-        <label id="fgColor2Wrap" class="hidden">Second color
-          <input type="color" id="fgColor2" value="#4361ee" />
-        </label>
-      </div>
-      <div class="field-row">
-        <label>Background
-          <input type="color" id="bgColor" value="#ffffff" />
-        </label>
-        <label class="checkbox-label">
-          <input type="checkbox" id="bgTransparent" /> Transparent
-        </label>
-      </div>
-
-      <h3>Logo (optional)</h3>
-      <label class="checkbox-label omq-logo-toggle">
-        <input type="checkbox" id="useOmqLogo" />
-        <img src="IMG/omq-logo.png" alt="OMQ" class="omq-logo-mini" /> Use OMQ logo
-      </label>
-      <div class="field-row">
-        <label class="file-label">
-          <input type="file" id="logoInput" accept="image/*" />
-          <span id="logoBtnText">Upload your own logo</span>
-        </label>
-        <button type="button" id="removeLogoBtn" class="ghost hidden">✕ Remove</button>
-      </div>
-      <div class="field-row" id="logoSizeWrap" style="display:none">
-        <label>Logo size
-          <input type="range" id="logoSize" min="15" max="40" step="1" value="28" />
-          <span class="range-val" id="logoSizeVal">28%</span>
-        </label>
-      </div>
-
-      <h3>Advanced</h3>
-      <div class="field-row">
-        <label>Margin
-          <input type="range" id="qrMargin" min="0" max="40" step="2" value="12" />
-          <span class="range-val" id="marginVal">12</span>
-        </label>
-        <label>Error correction
-          <select id="errorLevel">
-            <option value="L">L — 7%</option>
-            <option value="M">M — 15%</option>
-            <option value="Q" selected>Q — 25%</option>
-            <option value="H">H — 30% (best with logo)</option>
-          </select>
-        </label>
-      </div>
-    </section>
+    </div>
   </main>
 
-  <footer class="footer">
-    OMQ QR Studio · <a href="links.html">Link manager</a>
-  </footer>
+  <footer class="footer">OMQ</footer>
 
-  <!-- Mobile-only action bar -->
-  <div class="mobile-bar" id="mobileBar">
-    <button id="mobileSaveBtn">Save QR</button>
-  </div>
-
-  <script src="gh.js"></script>
-  <script src="app.js"></script>
 </body>
 </html>

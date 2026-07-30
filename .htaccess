@@ -1,0 +1,78 @@
+# ============================================================
+# OMQ Tools — Apache config for the document root.
+# The whole site lives here: pages, assets, API and redirects.
+# ============================================================
+
+DirectoryIndex index.html index.php
+Options -Indexes
+
+# ---------- Keep non-public files off the web ----------
+# The repo is uploaded as-is, so anything in it that is not meant to
+# be served has to be denied explicitly.
+<IfModule mod_authz_core.c>
+  # Holds the database password.
+  <Files "config.php">
+    Require all denied
+  </Files>
+  # Source, schema and docs — readable in the repo, not over HTTP.
+  <FilesMatch "\.(sql|md|example\.php)$">
+    Require all denied
+  </FilesMatch>
+  # .git, .gitignore, .htaccess itself.
+  <FilesMatch "^\.">
+    Require all denied
+  </FilesMatch>
+</IfModule>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # ---------- Certificate validation ----------
+  # AutoSSL and ACME prove we control the domain by fetching a token
+  # from /.well-known/ over plain http. Some hosts serve that path from
+  # a shared directory outside this docroot, in which case it is not a
+  # real file here and the catch-all below would answer it with the
+  # "Link not found" page — and the certificate would never issue.
+  # Must stay first: nothing may intercept it.
+  RewriteRule ^\.well-known/ - [L]
+
+  # Block the git directory outright: the rules above cover dotfiles,
+  # but not what is inside a dot-directory.
+  RewriteRule ^\.git(/|$) - [F,L]
+
+  # PHP only receives Authorization if it is handed over explicitly;
+  # many cPanel/CGI setups drop it, which makes every API call look
+  # signed-out.
+  RewriteCond %{HTTP:Authorization} .
+  RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+  # ---------- Pretty aliases ----------
+  # Convenience only. Navigation links use the .html names, so the
+  # site still works if mod_rewrite is off — short codes are the
+  # only thing that genuinely needs it.
+  RewriteRule ^qr/?$    qr.html    [L]
+  RewriteRule ^short/?$ short.html [L]
+
+  # ---------- Short codes ----------
+  # Real files and directories win; anything left is a code.
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^(.*)$ redirect.php [L]
+</IfModule>
+
+<IfModule mod_headers.c>
+  # A code's destination can change at any moment, and API responses
+  # are per-user, so neither may be cached anywhere.
+  <FilesMatch "^(redirect|api)\.php$">
+    Header always set Cache-Control "no-store, no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>
+
+# Static assets carry a ?v= cache buster, so they can be cached hard.
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css                "access plus 1 year"
+  ExpiresByType application/javascript  "access plus 1 year"
+  ExpiresByType image/png               "access plus 1 month"
+  ExpiresByType text/html               "access plus 0 seconds"
+</IfModule>

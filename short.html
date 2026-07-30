@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#0f1220" />
+  <title>OMQ Short Links</title>
+  <link rel="icon" href="IMG/omq-logo.png" />
+  <link rel="apple-touch-icon" href="IMG/omq-logo.png" />
+  <link rel="stylesheet" href="styles.css?v=3" />
+</head>
+<body>
+
+  <header class="topbar">
+    <a class="brand" href="index.html">
+      <img src="IMG/omq-logo.png" alt="OMQ" class="brand-logo" />
+      <span class="brand-name">OMQ <b>Short Links</b></span>
+    </a>
+    <div class="topbar-right">
+      <span class="who hidden" id="whoami"></span>
+      <button class="ghost hidden" id="signOutBtn">Sign out</button>
+      <a class="topbar-link" href="qr.html">QR Studio →</a>
+    </div>
+  </header>
+
+  <main class="admin-wrap">
+
+    <!-- ============ SIGN IN ============ -->
+    <section class="panel signin-panel" id="signInPanel">
+      <h2>Sign in</h2>
+      <p class="muted-copy">
+        Short links are managed by anyone with an
+        <b id="domainName">omqpro.com</b> Google account. Nothing to set up and
+        no password to keep — continue with the account you already use for work.
+      </p>
+
+      <div class="google-slot" id="googleBtn"></div>
+
+      <p class="status" id="signInStatus"></p>
+    </section>
+
+    <!-- ============ SHORTEN ============ -->
+    <section class="panel hidden" id="shortenPanel">
+      <h2>Shorten a link</h2>
+
+      <label>Destination URL
+        <input type="url" id="destInput" inputmode="url"
+               placeholder="https://example.com/a/very/long/address"
+               autocapitalize="off" autocorrect="off" spellcheck="false" />
+      </label>
+
+      <div class="field-row">
+        <label>Short code <span class="opt">optional</span>
+          <div class="prefix-input">
+            <span class="prefix" id="basePrefix">qr.omqpro.com/</span>
+            <input type="text" id="codeInput" placeholder="auto"
+                   autocapitalize="off" autocorrect="off" spellcheck="false" />
+          </div>
+        </label>
+        <label>Label <span class="opt">optional</span>
+          <input type="text" id="labelInput" placeholder="Summer campaign" />
+        </label>
+      </div>
+
+      <div class="actions">
+        <button id="createBtn">Shorten</button>
+      </div>
+      <p class="status" id="createStatus"></p>
+
+      <div class="result hidden" id="resultCard">
+        <span class="result-label">Your short link</span>
+        <div class="result-row">
+          <button class="result-link plain" id="resultLink" title="Copy to clipboard"></button>
+          <button class="secondary" id="copyResultBtn">Copy</button>
+        </div>
+        <div class="link-actions">
+          <a class="btn-link" id="resultOpen" target="_blank" rel="noopener noreferrer">Open</a>
+          <a class="btn-link" id="resultQr">Make a QR</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ LIST ============ -->
+    <section class="panel hidden" id="listPanel">
+      <div class="admin-header">
+        <h2>All links (<span id="linkCount">0</span>)</h2>
+        <button class="ghost" id="reloadBtn">Reload</button>
+      </div>
+
+      <label>
+        <input type="search" id="searchInput" placeholder="Search code, label or destination"
+               autocapitalize="off" autocorrect="off" spellcheck="false" />
+      </label>
+
+      <p class="muted-copy">
+        Changing a destination re-points everywhere that link has already been
+        shared or printed, immediately.
+      </p>
+
+      <div id="linkList"></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    OMQ Short Links · <a href="index.html">Home</a> · <a href="qr.html">QR Studio</a>
+  </footer>
+
+  <script src="api.js?v=3"></script>
+  <script src="short.js?v=3"></script>
+</body>
+</html>

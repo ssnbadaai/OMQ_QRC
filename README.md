@@ -1,17 +1,39 @@
-# OMQ QR Studio
+# OMQ Tools
 
-QR code generator and short link service for OMQ, published at
-**[qr.omqpro.com](https://qr.omqpro.com)** via GitHub Pages.
+Two tools for OMQ, served from **qr.omqpro.com** on cPanel:
 
-Everything runs in the browser. There is no backend, no database and no build
-step — pushing to `main` publishes the site.
+- **QR Studio** ([`qr.html`](qr.html)) — the QR code generator. Runs entirely
+  in the browser; no accounts, no server involved.
+- **Short Links** ([`short.html`](short.html)) — the link shortener. A service
+  in its own right: shorten anything, for any purpose. Sign in with a Google
+  Workspace account; links live in MySQL.
+
+[`index.html`](index.html) is a hub pointing at both.
+
+The two are deliberately independent. QR Studio can *offer* to make a short
+link, so a printed code can be re-pointed later, but it does not need one and
+the shortener knows nothing about QR codes.
+
+**This repository is the document root.** It is cloned straight into the
+subdomain's folder with cPanel's Git Version Control, so deploying an update is
+one *Pull*. Pages, assets, API and redirects are all one domain, which is why
+there is no CORS anywhere and why short links read `qr.omqpro.com/abc12`.
+
+Exactly one file is configured on the server — `config.php` — and it is
+gitignored, so a pull can never overwrite it or be blocked by it. Everything
+the browser needs it asks the server for. Setup is in
+**[DEPLOY.md](DEPLOY.md)**.
 
 ## QR generator
 
-Supports URL, plain text, Wi-Fi, email, phone, SMS and vCard content. Codes can
-be customised with dot and corner shapes, solid or gradient colours, a
-transparent background, an embedded logo (the OMQ mark or your own), adjustable
-margin and error correction.
+URL, plain text, Wi-Fi, email, phone, SMS and vCard. Dot and corner shapes,
+solid or gradient colours, transparent background, an embedded logo (the OMQ
+mark or your own), adjustable margin and error correction.
+
+Logos are trimmed to their real alpha bounds before being embedded. The QR
+clears a block of dots sized from the image's aspect ratio against a fixed area
+budget, so transparent padding is charged for at full price — trimming spends
+that budget on the artwork instead of on empty space.
 
 Export is PNG, JPEG or SVG up to 4096 px on desktop. On phones the download row
 is replaced by a single **Save QR** button that opens the native share sheet,
@@ -19,38 +41,44 @@ because file downloads are unreliable in mobile browsers.
 
 ## Short links
 
-Short links live in [`links.json`](links.json), committed alongside the site.
-When someone opens `qr.omqpro.com/<code>`, GitHub Pages serves
-[`404.html`](404.html), which looks the code up and redirects. Destinations that
-are not `http`/`https` are refused.
+`.htaccess` sends any path that is not a real file to
+[`redirect.php`](redirect.php), which looks the code up and redirects.
 
-Because a link is just an entry in a file in this repository, it keeps working
-for as long as the site is published — there is no service to expire or bill to
-lapse. The trade-off is that a QR code containing a short link is no longer
-self-contained: it depends on the site staying up, in exchange for a destination
-you can change after printing. The generator therefore leaves short links **off
-by default**.
+Redirects are **302, never 301**. A 301 is cached by browsers indefinitely, so
+re-pointing a link would never reach anyone who had already followed it — which
+is the entire reason these links exist.
 
-### Managing links
+Anyone with an `@omqpro.com` Google account can create and manage links. No
+tokens to issue, no passwords to keep: access is granted and revoked by adding
+or removing the Google account. The domain test uses the `hd` claim, which only
+Workspace accounts carry, so a personal account with a similar address cannot
+get in.
 
-[`links.html`](links.html) is the admin page. It needs a fine-grained GitHub
-token with **Contents: Read and write** on this repository, which is stored only
-in that browser's `localStorage` and never committed. From there you can create
-a link, re-point an existing one, or delete it. Changes are commits, so every
-edit is in the history — and they go live about a minute later, once Pages
-rebuilds.
-
-Note that `links.json` is public, like everything else in this repository.
+Scans are counted per link and shown in the list.
 
 ## Layout
 
 | File | Purpose |
 | --- | --- |
-| `index.html`, `app.js` | QR generator |
-| `links.html`, `links.js` | Short link manager (admin) |
-| `gh.js` | Shared GitHub API helpers |
-| `404.html` | Short link resolver |
-| `links.json` | The links themselves |
+| `index.html` | Hub — links to both tools |
+| `qr.html`, `app.js` | QR generator |
+| `short.html`, `short.js` | Short link service (UI) |
+| `api.js` | Google sign-in + API client |
+| `api.php` | `config` (public) / list / create / update / delete |
+| `redirect.php` | The redirect itself |
+| `auth.php` | Google ID token verification |
+| `lib.php` | Config, database, validation |
+| `config.php` | Database password and client ID — **gitignored**, created on the server |
+| `schema.sql` | The `links` table |
+| `.htaccess` | Routing, and denying everything not meant to be served |
 | `styles.css` | Styles for every page |
-| `lib/` | [qr-code-styling](https://github.com/kozakdenys/qr-code-styling), vendored so the site works offline |
-| `CNAME` | Custom domain for GitHub Pages |
+| `lib/` | [qr-code-styling](https://github.com/kozakdenys/qr-code-styling), vendored so the QR generator works offline |
+| `links.html` | Redirect to `short.html`, for old bookmarks |
+
+## History
+
+This started as a static GitHub Pages site that kept its links in a committed
+`links.json` and resolved them from `404.html`, with writes authorised by a
+personal GitHub token. Moving to cPanel replaced all of that: MySQL is the
+store, PHP does the redirect, and Google sign-in replaced the token. The old
+files are in the history if the reasoning is ever needed.

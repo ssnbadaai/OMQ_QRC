@@ -2,3 +2,6 @@
 __pycache__/
 Thumbs.db
 .DS_Store
+
+# Holds the database password. Upload it to the server by hand — never commit it.
+config.php

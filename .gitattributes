@@ -1,0 +1,8 @@
+# These files are authored on Windows and served from Linux. Normalise
+# to LF in the repository and on checkout so .htaccess and the PHP land
+# on the server the way Apache expects, however they get there.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary

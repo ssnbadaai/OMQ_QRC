@@ -4,7 +4,9 @@
 
 const $ = (id) => document.getElementById(id);
 
-const PREVIEW_SIZE = 280;
+/* Rendered at this size and scaled down by CSS, so the preview stays crisp
+   in the wide desktop column as well as on a phone. */
+const PREVIEW_SIZE = 480;
 
 let activeType = 'url';
 let logoDataUrl = null;
@@ -158,6 +160,9 @@ $('typeTabs').addEventListener('click', (e) => {
 
 /* ---------- Wire inputs to the live preview ---------- */
 document.querySelectorAll('input, textarea, select').forEach((el) => {
+  /* The logo controls redraw themselves once the image is ready — refreshing
+     here as well would render one frame with the previous logo. */
+  if (el.type === 'file' || el.id === 'useOmqLogo') return;
   el.addEventListener('input', refresh);
 });
 
@@ -174,16 +179,48 @@ $('logoSize').addEventListener('input', () => {
 });
 
 /* ============================================================
-   Short links — stored in the repo, so they keep working as long
-   as the site is published. Creating one requires an admin token.
+   Short links — the QR page is just a client of the shortener
+   service. Everything about creating one lives in api.js.
    ============================================================ */
-const GH = window.OMQ_GH;
+const API = window.OMQ_API;
+
+let googleMounted = false;
 
 function clearShortLink() {
   shortLink = null;
   shortLinkFor = null;
   $('makeShortBtn').disabled = false;
   $('makeShortBtn').textContent = 'Create short link';
+}
+
+/* The box shows either Google's sign-in button or the create button,
+   never both — signing in is a step, not a setting. */
+function showShortAuth() {
+  const signedIn = API.isSignedIn();
+  $('shortGoogleBtn').classList.toggle('hidden', signedIn);
+  $('makeShortBtn').classList.toggle('hidden', !signedIn);
+
+  if (signedIn) {
+    $('shortStatus').textContent = '';
+    return;
+  }
+
+  $('shortStatus').textContent = 'Continue with your work account to create one.';
+  if (googleMounted) return;
+  googleMounted = true;
+
+  API.mountButton($('shortGoogleBtn'), { onSignIn: showShortAuth })
+    .then(() => {
+      /* Name the domain once the server has told us what it is. */
+      if (!API.isSignedIn()) {
+        $('shortStatus').textContent =
+          `Continue with your ${API.ALLOWED_DOMAIN} account to create one.`;
+      }
+    })
+    .catch((err) => {
+      googleMounted = false;
+      $('shortStatus').textContent = '⚠ ' + err.message;
+    });
 }
 
 $('useShortLink').addEventListener('change', () => {
@@ -196,15 +233,7 @@ $('useShortLink').addEventListener('change', () => {
     refresh();
     return;
   }
-
-  if (!GH.getToken()) {
-    $('shortStatus').innerHTML =
-      'Creating short links needs admin access. <a href="links.html">Sign in to the link manager</a>, then come back.';
-    $('makeShortBtn').disabled = true;
-  } else {
-    $('shortStatus').textContent = '';
-    $('makeShortBtn').disabled = false;
-  }
+  showShortAuth();
 });
 
 /* Editing the address invalidates a short link made for the old one. */
@@ -221,106 +250,203 @@ $('makeShortBtn').addEventListener('click', async () => {
   const raw = $('urlInput').value.trim();
 
   try {
-    const destination = GH.normalizeUrl(raw);
+    const destination = API.normalizeUrl(raw);
     btn.disabled = true;
     btn.textContent = 'Creating…';
 
-    const { links, sha } = await GH.loadLinks();
-    const code = GH.makeCode(links);
-    links[code] = { url: destination, label: '', created: new Date().toISOString() };
-    await GH.saveLinks(links, sha, `Add short link /${code}`);
+    const { link } = await API.create({ url: destination, label: '' });
 
-    shortLink = GH.shortUrl(code);
+    shortLink = link.short;
     shortLinkFor = raw;
     btn.textContent = '✓ Short link created';
 
     status.innerHTML =
-      `QR now points at <b>${shortLink.replace(/^https?:\/\//, '')}</b> — ` +
-      `live in about a minute. <a href="links.html">Change its destination</a> any time.`;
+      `QR now points at <b>${link.short.replace(/^https?:\/\//, '')}</b>. ` +
+      `<a href="short.html">Change its destination</a> any time.`;
     refresh();
   } catch (err) {
     btn.disabled = false;
     btn.textContent = 'Create short link';
-    status.textContent = '⚠ ' + err.message;
+    if (err.status === 401) {
+      showShortAuth();
+      status.textContent = 'Your sign-in expired — continue with Google again.';
+    } else {
+      status.textContent = '⚠ ' + err.message;
+    }
   }
 });
 
-/* Arriving from the link manager with a URL to encode. */
+/* Arriving from the shortener with a URL to encode. */
 const presetUrl = new URLSearchParams(location.search).get('url');
 if (presetUrl) {
   $('urlInput').value = presetUrl;
 }
 
-/* ---------- Built-in OMQ logo toggle ---------- */
-let omqLogoPromise = null;
+/* ============================================================
+   Logo
+   ============================================================ */
 
-function getOmqLogo() {
-  if (!omqLogoPromise) {
-    omqLogoPromise = fetch('IMG/omq-logo.png')
-      .then((r) => {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.blob();
-      })
-      .then(
-        (blob) =>
-          new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          })
-      );
+/* The QR clears a block of dots for the logo, sized from the image's aspect
+   ratio against a fixed area budget. Transparent padding is charged for at
+   full price: the OMQ mark is a 192x464 glyph on a 512x512 canvas, so two
+   thirds of the cleared block goes to empty space and the mark comes out
+   small. Trim to the artwork's real bounds — same budget, all of it used —
+   and set it on an opaque tile so it stays legible on any background. */
+function trimBounds(imageData, w, h) {
+  const { data } = imageData;
+  let minX = w, minY = h, maxX = -1, maxY = -1;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (data[(y * w + x) * 4 + 3] > 12) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
   }
-  return omqLogoPromise;
+  if (maxX < 0) return null; /* fully transparent */
+  return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
+}
+
+function fitLogo(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onerror = () => reject(new Error('not an image'));
+    img.onload = () => {
+      const w = img.naturalWidth;
+      const h = img.naturalHeight;
+      if (!w || !h) return reject(new Error('empty image'));
+
+      const src = document.createElement('canvas');
+      src.width = w;
+      src.height = h;
+      const sctx = src.getContext('2d');
+      sctx.drawImage(img, 0, 0);
+
+      const box = trimBounds(sctx.getImageData(0, 0, w, h), w, h) || { x: 0, y: 0, w, h };
+
+      /* Keep the trimmed aspect ratio — padding it back out to a square would
+         hand the wasted space straight back. */
+      const pad = Math.round(Math.min(box.w, box.h) * 0.1);
+      const out = document.createElement('canvas');
+      out.width = box.w + pad * 2;
+      out.height = box.h + pad * 2;
+      const octx = out.getContext('2d');
+
+      octx.fillStyle = '#ffffff';
+      octx.beginPath();
+      const radius = Math.min(out.width, out.height) * 0.18;
+      if (octx.roundRect) octx.roundRect(0, 0, out.width, out.height, radius);
+      else octx.rect(0, 0, out.width, out.height);
+      octx.fill();
+
+      octx.drawImage(img, box.x, box.y, box.w, box.h, pad, pad, box.w, box.h);
+
+      resolve(out.toDataURL('image/png'));
+    };
+    img.src = dataUrl;
+  });
+}
+
+/* A logo forces the highest error correction (see buildOptions), so remember
+   what the user picked and hand it back when the logo goes away. */
+let errorLevelBeforeLogo = null;
+
+function setLogo(dataUrl) {
+  logoDataUrl = dataUrl || null;
+
+  if (logoDataUrl) {
+    if (errorLevelBeforeLogo === null) errorLevelBeforeLogo = $('errorLevel').value;
+    $('errorLevel').value = 'H';
+  } else if (errorLevelBeforeLogo !== null) {
+    $('errorLevel').value = errorLevelBeforeLogo;
+    errorLevelBeforeLogo = null;
+  }
+
+  $('logoSizeWrap').classList.toggle('hidden', !logoDataUrl);
+  refresh();
+}
+
+/* ---------- Built-in OMQ logo ---------- */
+let omqLogo = null;
+let uploadedLogo = null;
+
+function loadOmqLogo() {
+  return fetch('IMG/omq-logo.png')
+    .then((r) => {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.blob();
+    })
+    .then(
+      (blob) =>
+        new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(new Error('could not read the logo'));
+          reader.readAsDataURL(blob);
+        })
+    );
 }
 
 $('useOmqLogo').addEventListener('change', async () => {
-  if ($('useOmqLogo').checked) {
+  const box = $('useOmqLogo');
+
+  if (!box.checked) {
+    /* Fall back to the user's own logo if they still have one loaded. */
+    setLogo(uploadedLogo);
+    return;
+  }
+
+  if (!omqLogo) {
+    box.disabled = true;
     try {
-      logoDataUrl = await getOmqLogo();
+      omqLogo = await fitLogo(await loadOmqLogo());
     } catch {
-      omqLogoPromise = null;
-      $('useOmqLogo').checked = false;
+      box.checked = false;
+      box.disabled = false;
       $('statusText').textContent = '⚠ Could not load the OMQ logo (IMG/omq-logo.png).';
       return;
     }
-    $('logoInput').value = '';
-    $('logoBtnText').textContent = 'Upload your own logo';
-    $('removeLogoBtn').classList.add('hidden');
-    $('logoSizeWrap').style.display = 'flex';
-    $('errorLevel').value = 'H';
-  } else {
-    logoDataUrl = null;
-    $('logoSizeWrap').style.display = 'none';
+    box.disabled = false;
+    /* The toggle was ticked while the fetch was in flight and then unticked. */
+    if (!box.checked) return;
   }
-  refresh();
+
+  setLogo(omqLogo);
 });
 
 /* ---------- Custom logo upload ---------- */
 $('logoInput').addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file) return;
+
   const reader = new FileReader();
-  reader.onload = () => {
-    logoDataUrl = reader.result;
+  reader.onload = async () => {
+    try {
+      uploadedLogo = await fitLogo(reader.result);
+    } catch {
+      $('logoInput').value = '';
+      $('statusText').textContent = '⚠ That file could not be read as an image.';
+      return;
+    }
     $('useOmqLogo').checked = false;
     $('logoBtnText').textContent = '✓ ' + file.name;
     $('removeLogoBtn').classList.remove('hidden');
-    $('logoSizeWrap').style.display = 'flex';
-    $('errorLevel').value = 'H';
-    refresh();
+    setLogo(uploadedLogo);
+  };
+  reader.onerror = () => {
+    $('statusText').textContent = '⚠ That file could not be read.';
   };
   reader.readAsDataURL(file);
 });
 
 $('removeLogoBtn').addEventListener('click', () => {
-  logoDataUrl = null;
-  $('useOmqLogo').checked = false;
+  uploadedLogo = null;
   $('logoInput').value = '';
   $('logoBtnText').textContent = 'Upload your own logo';
   $('removeLogoBtn').classList.add('hidden');
-  $('logoSizeWrap').style.display = 'none';
-  refresh();
+  setLogo($('useOmqLogo').checked ? omqLogo : null);
 });
 
 /* ---------- Desktop downloads ---------- */
