@@ -17,6 +17,10 @@
   let gisReady = null;
   let configPromise = null;
 
+  /* Whether the server has confirmed this account, cached for the
+     page lifetime so four tools do not each ask. */
+  let verified = null;
+
   /* Settings come from the server, not a committed file, so the only
      thing a deployment configures is config.php — see api.php. */
   function loadConfig() {
@@ -85,6 +89,9 @@
   function signOut() {
     const saved = readStored();
     localStorage.removeItem(TOKEN_KEY);
+    /* Otherwise the next person on this browser inherits the last
+       person's verification. */
+    verified = null;
     try {
       if (global.google && saved && saved.email) {
         google.accounts.id.revoke(saved.email, () => {});
@@ -194,6 +201,112 @@
     return data;
   }
 
+  /* ============================================================
+     One session for the whole site.
+
+     The token lives in localStorage under a single key, so signing in
+     on any tool signs you into all of them — there was never a second
+     login to build, only the same screen repeated four times. This
+     renders that screen once, so every tool gets identical wording,
+     identical validation, and an identical account chip.
+     ============================================================ */
+
+  function verify() {
+    if (!verified) {
+      verified = API.me().catch((err) => {
+        verified = null;
+        throw err;
+      });
+    }
+    return verified;
+  }
+
+  function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text) node.textContent = text;
+    return node;
+  }
+
+  /**
+   * Wire a page to the shared session.
+   *
+   *   gate      element the sign-in card is drawn into
+   *   account   element the email + Sign out chip is drawn into
+   *   blurb     one line explaining what signing in unlocks here
+   *   onIn      called with the verified user
+   *   onOut     called when signed out, or refused by the server
+   */
+  async function mountSession({ gate, account, blurb, onIn, onOut } = {}) {
+    await loadConfig();
+
+    const card = el('div', 'gate');
+    const status = el('p', 'status');
+    const slot = el('div', 'google-slot');
+    /* A function, because the domain is only known once config lands —
+       later than the caller can write a sentence containing it. */
+    const line = typeof blurb === 'function' ? blurb(API.ALLOWED_DOMAIN) : blurb;
+    card.append(
+      el('p', 'muted-copy', line || `Continue with your ${API.ALLOWED_DOMAIN} Google account.`),
+      slot,
+      status
+    );
+
+    if (gate) {
+      gate.innerHTML = '';
+      gate.appendChild(card);
+    }
+
+    function paint(signedIn) {
+      card.classList.toggle('hidden', signedIn);
+      if (!account) return;
+
+      account.innerHTML = '';
+      const user = getUser();
+      if (!signedIn || !user) return;
+
+      const out = el('button', 'ghost', 'Sign out');
+      /* signOut() fires the onSignedOut callback below, which does the
+         repainting — so this only has to ask. */
+      out.addEventListener('click', signOut);
+      account.append(el('span', 'who', user.email), out);
+    }
+
+    async function accept() {
+      status.textContent = '';
+      status.className = 'status';
+      try {
+        const { user } = await verify();
+        paint(true);
+        if (onIn) onIn(user);
+      } catch (err) {
+        /* Signed in with Google, but this server will not have them. */
+        signOut();
+        status.textContent = '⚠ ' + err.message;
+        status.className = 'status status-warn';
+      }
+    }
+
+    function leave() {
+      verified = null;
+      paint(false);
+      if (onOut) onOut();
+    }
+
+    await mountButton(slot, { onSignIn: accept, onSignOut: leave });
+
+    if (isSignedIn()) {
+      await accept();
+    } else {
+      paint(false);
+    }
+
+    if (!API.GOOGLE_CLIENT_ID || API.GOOGLE_CLIENT_ID.startsWith('REPLACE_ME')) {
+      status.textContent = '⚠ Google sign-in is not configured yet (see config.php).';
+      status.className = 'status status-warn';
+    }
+  }
+
   /* ---------- client-side validation ----------
      Repeated on the server, which is what counts. This only spares
      a round trip on an obvious typo. */
@@ -236,6 +349,7 @@
 
     loadConfig,
     mountButton,
+    mountSession,
     getUser,
     isSignedIn,
     signOut,

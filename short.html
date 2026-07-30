@@ -8,7 +8,7 @@
   <title>OMQ Short Links</title>
   <link rel="icon" href="IMG/omq-logo.png" />
   <link rel="apple-touch-icon" href="IMG/omq-logo.png" />
-  <link rel="stylesheet" href="styles.css?v=4" />
+  <link rel="stylesheet" href="styles.css?v=5" />
 </head>
 <body>
 
@@ -18,8 +18,7 @@
       <span class="brand-name">OMQ <b>Short Links</b></span>
     </a>
     <div class="topbar-right">
-      <span class="who hidden" id="whoami"></span>
-      <button class="ghost hidden" id="signOutBtn">Sign out</button>
+      <span class="account" id="authAccount"></span>
       <a class="topbar-link" href="qr.html">QR Studio →</a>
     </div>
   </header>
@@ -29,15 +28,7 @@
     <!-- ============ SIGN IN ============ -->
     <section class="panel signin-panel" id="signInPanel">
       <h2>Sign in</h2>
-      <p class="muted-copy">
-        Short links are managed by anyone with an
-        <b id="domainName">omqpro.com</b> Google account. Nothing to set up and
-        no password to keep — continue with the account you already use for work.
-      </p>
-
-      <div class="google-slot" id="googleBtn"></div>
-
-      <p class="status" id="signInStatus"></p>
+      <div id="authGate"></div>
     </section>
 
     <!-- ============ SHORTEN ============ -->
@@ -106,7 +97,7 @@
     OMQ Short Links · <a href="index.html">Home</a> · <a href="qr.html">QR Studio</a>
   </footer>
 
-  <script src="api.js?v=4"></script>
-  <script src="short.js?v=4"></script>
+  <script src="api.js?v=5"></script>
+  <script src="short.js?v=5"></script>
 </body>
 </html>

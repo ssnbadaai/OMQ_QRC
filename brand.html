@@ -8,7 +8,7 @@
   <title>OMQ Brand Kit</title>
   <link rel="icon" href="IMG/omq-logo.png" />
   <link rel="apple-touch-icon" href="IMG/omq-logo.png" />
-  <link rel="stylesheet" href="styles.css?v=4" />
+  <link rel="stylesheet" href="styles.css?v=5" />
 </head>
 <body>
 
@@ -18,8 +18,7 @@
       <span class="brand-name">OMQ <b>Brand Kit</b></span>
     </a>
     <div class="topbar-right">
-      <span class="who hidden" id="whoami"></span>
-      <button class="ghost hidden" id="signOutBtn">Sign out</button>
+      <span class="account" id="authAccount"></span>
       <a class="topbar-link" href="dev.html">Dev Tools →</a>
     </div>
   </header>
@@ -29,13 +28,7 @@
     <!-- ============ SIGN IN ============ -->
     <section class="panel signin-panel" id="signInPanel">
       <h2>Sign in</h2>
-      <p class="muted-copy">
-        The brand library is shared by everyone with an
-        <b id="domainName">omqpro.com</b> Google account, so the whole team
-        works from the same approved files.
-      </p>
-      <div class="google-slot" id="googleBtn"></div>
-      <p class="status" id="signInStatus"></p>
+      <div id="authGate"></div>
     </section>
 
     <!-- ============ LIBRARY ============ -->
@@ -115,7 +108,7 @@
     OMQ Brand Kit · <a href="dev.html">Dev Tools</a> · <a href="index.html">Home</a>
   </footer>
 
-  <script src="api.js?v=4"></script>
-  <script src="brand.js?v=4"></script>
+  <script src="api.js?v=5"></script>
+  <script src="brand.js?v=5"></script>
 </body>
 </html>

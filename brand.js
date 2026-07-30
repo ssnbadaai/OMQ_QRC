@@ -44,7 +44,6 @@ const isImage = (a) => /\.(svg|png|jpe?g|webp)$/i.test(a.url);
 function handle(err, statusEl) {
   if (err && err.status === 401) {
     showSignedOut();
-    say($('signInStatus'), 'Your sign-in expired. Continue with Google again.', 'warn');
     return;
   }
   say(statusEl, '⚠ ' + err.message, 'warn');
@@ -59,23 +58,14 @@ async function copy(text, statusEl) {
   }
 }
 
-/* ---------- sign in ---------- */
+/* ---------- sign in ----------
+   Shared with every other tool; api.js owns the card and the chip. */
 $('addBtn').dataset.label = $('addBtn').textContent;
 
-API.loadConfig()
-  .then(() => {
-    $('domainName').textContent = API.ALLOWED_DOMAIN;
-  })
-  .catch(() => {});
-
 function showSignedIn() {
-  const user = API.getUser();
   $('signInPanel').classList.add('hidden');
   $('libraryPanel').classList.remove('hidden');
   $('addPanel').classList.remove('hidden');
-  $('signOutBtn').classList.remove('hidden');
-  $('whoami').classList.remove('hidden');
-  $('whoami').textContent = (user && user.email) || '';
 }
 
 function showSignedOut() {
@@ -83,27 +73,23 @@ function showSignedOut() {
   $('signInPanel').classList.remove('hidden');
   $('libraryPanel').classList.add('hidden');
   $('addPanel').classList.add('hidden');
-  $('signOutBtn').classList.add('hidden');
-  $('whoami').classList.add('hidden');
 }
 
-API.mountButton($('googleBtn'), {
-  onSignIn: async () => {
-    say($('signInStatus'), '');
+API.mountSession({
+  gate: $('authGate'),
+  account: $('authAccount'),
+  blurb: (domain) =>
+    `The brand library is shared by everyone with a ${domain} Google account, ` +
+    'so the whole team works from the same approved files.',
+  onIn: async () => {
     try {
       await refresh();
       showSignedIn();
     } catch (err) {
-      API.signOut();
-      say($('signInStatus'), '⚠ ' + err.message, 'warn');
+      say($('listStatus'), '⚠ ' + err.message, 'warn');
     }
   },
-  onSignOut: showSignedOut,
-}).catch((err) => say($('signInStatus'), '⚠ ' + err.message, 'warn'));
-
-$('signOutBtn').addEventListener('click', () => {
-  API.signOut();
-  say($('signInStatus'), 'Signed out.', 'ok');
+  onOut: showSignedOut,
 });
 
 /* ---------- load ---------- */
@@ -334,12 +320,3 @@ function render() {
 
 /* ---------- init ---------- */
 syncAddForm();
-
-if (API.isSignedIn()) {
-  refresh()
-    .then(showSignedIn)
-    .catch(() => {
-      API.signOut();
-      showSignedOut();
-    });
-}

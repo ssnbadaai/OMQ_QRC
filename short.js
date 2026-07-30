@@ -40,33 +40,20 @@ async function copy(text, statusEl) {
 function handle(err, statusEl) {
   if (err && err.status === 401) {
     showSignedOut();
-    say($('signInStatus'), 'Your sign-in expired. Continue with Google again.', 'warn');
     return;
   }
   say(statusEl, '⚠ ' + err.message, 'warn');
 }
 
-/* ---------- sign in ---------- */
+/* ---------- sign in ----------
+   One session for the whole site: api.js draws the same card, runs the
+   same check and shows the same account chip on every tool. */
 $('createBtn').dataset.label = $('createBtn').textContent;
 
-/* The domain and the link prefix are the server's to state. */
-API.loadConfig()
-  .then(() => {
-    $('domainName').textContent = API.ALLOWED_DOMAIN;
-    $('basePrefix').textContent = bare(API.SHORT_BASE);
-  })
-  .catch(() => {
-    /* mountButton reports this properly; nothing useful to add here. */
-  });
-
 function showSignedIn() {
-  const user = API.getUser();
   $('signInPanel').classList.add('hidden');
   $('shortenPanel').classList.remove('hidden');
   $('listPanel').classList.remove('hidden');
-  $('signOutBtn').classList.remove('hidden');
-  $('whoami').classList.remove('hidden');
-  $('whoami').textContent = (user && user.email) || '';
   $('destInput').focus();
 }
 
@@ -76,30 +63,23 @@ function showSignedOut() {
   $('shortenPanel').classList.add('hidden');
   $('listPanel').classList.add('hidden');
   $('resultCard').classList.add('hidden');
-  $('signOutBtn').classList.add('hidden');
-  $('whoami').classList.add('hidden');
 }
 
-API.mountButton($('googleBtn'), {
-  onSignIn: async () => {
-    say($('signInStatus'), '');
+API.mountSession({
+  gate: $('authGate'),
+  account: $('authAccount'),
+  blurb: (domain) =>
+    `Continue with your ${domain} Google account to create and manage short links.`,
+  onIn: async () => {
+    $('basePrefix').textContent = bare(API.SHORT_BASE);
     try {
       await refresh();
       showSignedIn();
     } catch (err) {
-      /* Signed in with Google, but the server said no. */
-      API.signOut();
-      say($('signInStatus'), '⚠ ' + err.message, 'warn');
+      say($('createStatus'), '⚠ ' + err.message, 'warn');
     }
   },
-  onSignOut: showSignedOut,
-}).catch((err) => {
-  say($('signInStatus'), '⚠ ' + err.message, 'warn');
-});
-
-$('signOutBtn').addEventListener('click', () => {
-  API.signOut();
-  say($('signInStatus'), 'Signed out.', 'ok');
+  onOut: showSignedOut,
 });
 
 /* ---------- load ---------- */
@@ -311,12 +291,6 @@ function render() {
   });
 }
 
-/* ---------- init ---------- */
-if (API.isSignedIn()) {
-  refresh()
-    .then(showSignedIn)
-    .catch(() => {
-      API.signOut();
-      showSignedOut();
-    });
-}
+/* ---------- init ----------
+   mountSession restores the session if there is one, so there is
+   nothing to do here. */

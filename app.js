@@ -184,8 +184,6 @@ $('logoSize').addEventListener('input', () => {
    ============================================================ */
 const API = window.OMQ_API;
 
-let googleMounted = false;
-
 function clearShortLink() {
   shortLink = null;
   shortLinkFor = null;
@@ -193,49 +191,21 @@ function clearShortLink() {
   $('makeShortBtn').textContent = 'Create short link';
 }
 
-/* The box shows either Google's sign-in button or the create button,
-   never both — signing in is a step, not a setting. */
-function showShortAuth() {
-  const signedIn = API.isSignedIn();
-  $('shortGoogleBtn').classList.toggle('hidden', signedIn);
-  $('makeShortBtn').classList.toggle('hidden', !signedIn);
-
-  if (signedIn) {
+/* The same session as every other tool — signing in on the shortener or
+   the Brand Kit means this box is already unlocked when you get here. */
+API.mountSession({
+  gate: $('authGate'),
+  account: $('authAccount'),
+  blurb: (domain) =>
+    `Continue with your ${domain} Google account to create a short link.`,
+  onIn: () => {
+    $('makeShortBtn').classList.remove('hidden');
     $('shortStatus').textContent = '';
-    return;
-  }
-
-  $('shortStatus').textContent = 'Continue with your work account to create one.';
-  if (googleMounted) return;
-  googleMounted = true;
-
-  API.mountButton($('shortGoogleBtn'), { onSignIn: confirmShortAuth })
-    .then(() => {
-      /* Name the domain once the server has told us what it is. */
-      if (!API.isSignedIn()) {
-        $('shortStatus').textContent =
-          `Continue with your ${API.ALLOWED_DOMAIN} account to create one.`;
-      }
-    })
-    .catch((err) => {
-      googleMounted = false;
-      $('shortStatus').textContent = '⚠ ' + err.message;
-    });
-}
-
-/* Signing in with Google only proves who someone is. Whether this
-   server will accept them is a separate question, and they should hear
-   the answer now rather than after filling the form in. */
-async function confirmShortAuth() {
-  try {
-    await API.me();
-    showShortAuth();
-  } catch (err) {
-    API.signOut();
-    showShortAuth();
-    $('shortStatus').textContent = '⚠ ' + err.message;
-  }
-}
+  },
+  onOut: () => {
+    $('makeShortBtn').classList.add('hidden');
+  },
+});
 
 $('useShortLink').addEventListener('change', () => {
   const on = $('useShortLink').checked;
@@ -245,9 +215,7 @@ $('useShortLink').addEventListener('change', () => {
     clearShortLink();
     $('shortStatus').textContent = '';
     refresh();
-    return;
   }
-  showShortAuth();
 });
 
 /* Editing the address invalidates a short link made for the old one. */
@@ -281,12 +249,10 @@ $('makeShortBtn').addEventListener('click', async () => {
   } catch (err) {
     btn.disabled = false;
     btn.textContent = 'Create short link';
-    if (err.status === 401) {
-      showShortAuth();
-      status.textContent = 'Your sign-in expired — continue with Google again.';
-    } else {
-      status.textContent = '⚠ ' + err.message;
-    }
+    status.textContent =
+      err.status === 401
+        ? 'Your sign-in expired — continue with Google again.'
+        : '⚠ ' + err.message;
   }
 });
 

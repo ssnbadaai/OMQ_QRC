@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="IMG/omq-logo.png" />
   <!-- ?v= is a cache buster: bump it whenever styles.css or app.js changes,
        otherwise browsers keep serving the previous copy. -->
-  <link rel="stylesheet" href="styles.css?v=4" />
+  <link rel="stylesheet" href="styles.css?v=5" />
   <script src="lib/qr-code-styling.js"></script>
 </head>
 <body>
@@ -23,6 +23,7 @@
       <span class="brand-name">OMQ <b>QR Studio</b></span>
     </a>
     <div class="topbar-right">
+      <span class="account" id="authAccount"></span>
       <a class="topbar-link" href="short.html">Short Links →</a>
     </div>
   </header>
@@ -91,9 +92,9 @@
             The QR code will contain a short link instead of the address itself, so you
             can point it somewhere new without reprinting it.
           </p>
-          <div class="google-slot" id="shortGoogleBtn"></div>
+          <div id="authGate"></div>
           <div class="actions">
-            <button type="button" id="makeShortBtn">Create short link</button>
+            <button type="button" class="hidden" id="makeShortBtn">Create short link</button>
           </div>
           <p class="status" id="shortStatus"></p>
         </div>
@@ -276,7 +277,7 @@
     <button id="mobileSaveBtn">Save QR</button>
   </div>
 
-  <script src="api.js?v=4"></script>
-  <script src="app.js?v=4"></script>
+  <script src="api.js?v=5"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>

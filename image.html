@@ -8,7 +8,7 @@
   <title>OMQ Image Tools</title>
   <link rel="icon" href="IMG/omq-logo.png" />
   <link rel="apple-touch-icon" href="IMG/omq-logo.png" />
-  <link rel="stylesheet" href="styles.css?v=4" />
+  <link rel="stylesheet" href="styles.css?v=5" />
 </head>
 <body>
 
@@ -18,7 +18,7 @@
       <span class="brand-name">OMQ <b>Image Tools</b></span>
     </a>
     <div class="topbar-right">
-      <span class="who hidden" id="whoami"></span>
+      <span class="account" id="authAccount"></span>
       <a class="topbar-link" href="dev.html">Dev Tools →</a>
     </div>
   </header>
@@ -112,13 +112,7 @@
 
     <!-- ============ SIGN IN (only for Brand Kit features) ============ -->
     <section class="panel" id="signInPanel">
-      <p class="muted-copy">
-        Palette extraction works without signing in. Continue with your
-        <b id="domainName">omqpro.com</b> account to compare against the Brand
-        Kit fonts and to save colours into it.
-      </p>
-      <div class="google-slot" id="googleBtn"></div>
-      <p class="status" id="signInStatus"></p>
+      <div id="authGate"></div>
     </section>
   </main>
 
@@ -126,7 +120,7 @@
     OMQ Image Tools · <a href="dev.html">Dev Tools</a> · <a href="index.html">Home</a>
   </footer>
 
-  <script src="api.js?v=4"></script>
-  <script src="image.js?v=4"></script>
+  <script src="api.js?v=5"></script>
+  <script src="image.js?v=5"></script>
 </body>
 </html>

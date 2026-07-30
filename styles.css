@@ -832,3 +832,16 @@ button.ghost:hover { color: #ff6b6b; border-color: #ff6b6b; }
   .asset-preview { height: 105px; }
   .stage-frame img, .stage-frame video { max-height: 300px; }
 }
+
+/* ---------- Shared session (api.js mountSession) ---------- */
+.gate { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.gate .muted-copy { max-width: 46ch; margin: 0 auto; }
+.gate .status { margin-bottom: 0; }
+
+.account { display: flex; align-items: center; gap: 10px; }
+.account .ghost { min-height: 34px; padding: 6px 12px; font-size: 13px; }
+
+@media (max-width: 720px) {
+  /* The email is the first thing to go when the bar gets tight. */
+  .account .who { display: none; }
+}

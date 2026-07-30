@@ -350,48 +350,37 @@ $('cropBtn').addEventListener('click', () => {
 });
 
 /* ============================================================
-   Sign-in — optional, and only for the Brand Kit parts
+   Sign-in — optional here, and shared with every other tool.
+   Palette extraction needs nobody's permission; the Brand Kit parts do.
    ============================================================ */
-API.loadConfig()
-  .then(() => {
-    $('domainName').textContent = API.ALLOWED_DOMAIN;
-  })
-  .catch(() => {});
-
 async function loadBrandFonts() {
   const data = await API.assets.list();
   brandFonts = (data.assets || []).filter((a) => a.kind === 'font');
   renderFontSamples();
-
-  const user = API.getUser();
-  $('whoami').textContent = (user && user.email) || '';
-  $('whoami').classList.remove('hidden');
-  $('signInPanel').classList.add('hidden');
-  $('saveToBrandBtn').classList.remove('hidden');
 }
 
-API.mountButton($('googleBtn'), {
-  onSignIn: async () => {
-    say($('signInStatus'), '');
+API.mountSession({
+  gate: $('authGate'),
+  account: $('authAccount'),
+  blurb: (domain) =>
+    `Palette extraction works without signing in. Continue with your ${domain} ` +
+    'account to compare against the Brand Kit fonts and to save colours into it.',
+  onIn: async () => {
+    $('signInPanel').classList.add('hidden');
+    $('saveToBrandBtn').classList.remove('hidden');
     try {
       await loadBrandFonts();
     } catch (err) {
-      API.signOut();
-      say($('signInStatus'), '⚠ ' + err.message, 'warn');
+      say($('fontStatus'), '⚠ ' + err.message, 'warn');
     }
   },
-  onSignOut: () => {
+  onOut: () => {
     brandFonts = [];
     renderFontSamples();
     $('signInPanel').classList.remove('hidden');
     $('saveToBrandBtn').classList.add('hidden');
-    $('whoami').classList.add('hidden');
   },
-}).catch((err) => say($('signInStatus'), '⚠ ' + err.message, 'warn'));
+});
 
 /* ---------- init ---------- */
 renderFontSamples();
-
-if (API.isSignedIn()) {
-  loadBrandFonts().catch(() => API.signOut());
-}
