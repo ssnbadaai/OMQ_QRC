@@ -79,6 +79,13 @@ Photos are uploaded to `assets/` and referenced by absolute URL. A `data:` URI
 previews perfectly here and then fails in the recipient's inbox — which is the
 worst possible moment to discover it — so the tool refuses to inline one.
 
+The default type is **Closest to 29LT Zarid Text** — that family is licensed
+and cannot be embedded, so the stack approximates it from fonts people already
+have: Palatino or Book Antiqua for the humanist Latin, Sakkal Majalla,
+Traditional Arabic or Geeza Pro for the Naskh. Stacks resolve per glyph, so one
+list serves both scripts as long as the Latin faces lead and the Naskh ones
+follow.
+
 Fonts uploaded to the Brand Kit can be used on a card, with a caveat worth
 stating plainly: **Gmail and Outlook on Windows discard `@font-face` entirely.**
 No email tool can change that. A brand font is therefore an enhancement for the

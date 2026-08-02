@@ -19,9 +19,30 @@ const API = window.OMQ_API;
 
 const WIDTH = 600; // the width every email design settled on, long ago
 
+/* Stacks are per-glyph: a Latin face that has no Arabic simply falls
+   through to the next entry for those characters, so one list can
+   serve both scripts if the Latin faces lead and the Naskh ones
+   follow.
+
+   `zarid` is as close as installed fonts get to 29LT Zarid Text, which
+   is licensed and cannot be embedded. Its Latin is a humanist old-style
+   serif with calligraphic roots — Palatino and Book Antiqua are the
+   nearest thing on Windows and macOS, with Constantia behind them — and
+   its Arabic is a modern Naskh, which Sakkal Majalla and Traditional
+   Arabic approximate on Windows and Geeza Pro on Apple. */
 const FAMILIES = {
+  zarid:
+    "'Palatino Linotype', Palatino, 'Book Antiqua', Constantia, " +
+    "'Sakkal Majalla', 'Traditional Arabic', 'Geeza Pro', 'Noto Naskh Arabic', " +
+    'Georgia, serif',
   serif: "Georgia, 'Times New Roman', 'Noto Naskh Arabic', serif",
-  sans: "Arial, Helvetica, 'Noto Sans Arabic', sans-serif",
+  sans: "Arial, Helvetica, 'Segoe UI', 'Noto Sans Arabic', sans-serif",
+};
+
+const FAMILY_LABELS = {
+  zarid: 'Closest to 29LT Zarid Text',
+  serif: 'Serif — Georgia',
+  sans: 'Sans — Arial / Helvetica',
 };
 
 /* Gmail and Outlook on Windows discard @font-face outright, so a brand
@@ -36,9 +57,9 @@ const FONT_SUPPORT =
 
 function fontOf(id) {
   const brand = brandFonts.find((f) => 'brand-' + f.id === id);
-  if (!brand) return FAMILIES[id] || FAMILIES.serif;
+  if (!brand) return FAMILIES[id] || FAMILIES.zarid;
   /* The custom face first, the chosen fallback immediately behind it. */
-  const fallback = FAMILIES[$('fontFallback').value] || FAMILIES.serif;
+  const fallback = FAMILIES[$('fontFallback').value] || FAMILIES.zarid;
   return `'${brand.family}', ${fallback}`;
 }
 
@@ -532,32 +553,47 @@ $('langSelect').addEventListener('change', () => {
 $('accentColor').addEventListener('input', refresh);
 $('accentColor').addEventListener('change', ensureArt);
 
-function buildFontSelect() {
-  const sel = $('fontFamily');
-  const chosen = sel.value;
-  sel.innerHTML = '';
+/* Both selects are built from FAMILIES, so adding a stack adds it in
+   both places. Only the first offers uploaded fonts — the second is
+   what happens when those are refused. */
+function buildFontSelects() {
+  [['fontFamily', true], ['fontFallback', false]].forEach(([id, withBrand]) => {
+    const sel = $(id);
+    const chosen = sel.value;
+    sel.innerHTML = '';
 
-  const add = (value, text) => {
-    const o = document.createElement('option');
-    o.value = value;
-    o.textContent = text;
-    sel.appendChild(o);
-  };
-  add('serif', 'Serif — Georgia');
-  add('sans', 'Sans — Arial / Helvetica');
-  brandFonts.forEach((f) => add('brand-' + f.id, f.name + ' — uploaded'));
+    const add = (value, text) => {
+      const o = document.createElement('option');
+      o.value = value;
+      o.textContent = text;
+      sel.appendChild(o);
+    };
 
-  sel.value = chosen || 'serif';
+    Object.keys(FAMILIES).forEach((key) => add(key, FAMILY_LABELS[key]));
+    if (withBrand) brandFonts.forEach((f) => add('brand-' + f.id, f.name + ' — uploaded'));
+
+    sel.value = chosen || 'zarid';
+  });
   showFontNote();
 }
 
 function showFontNote() {
-  const custom = $('fontFamily').value.startsWith('brand-');
-  $('fontNote').textContent = custom
-    ? FONT_SUPPORT
-    : brandFonts.length
-      ? 'Upload fonts under Brand Kit → Fonts to use them here.'
-      : 'Sign in and add fonts to the Brand Kit to use your own.';
+  const value = $('fontFamily').value;
+  if (value.startsWith('brand-')) {
+    $('fontNote').textContent = FONT_SUPPORT;
+    return;
+  }
+  if (value === 'zarid') {
+    $('fontNote').textContent =
+      '29LT Zarid Text is licensed and cannot be embedded, so this is the ' +
+      'nearest installed match: Palatino or Book Antiqua for Latin, Sakkal ' +
+      'Majalla or Geeza Pro for Arabic. Licensed the real thing? Add the web ' +
+      'font under Brand Kit → Fonts and pick it above.';
+    return;
+  }
+  $('fontNote').textContent = brandFonts.length
+    ? 'Upload fonts under Brand Kit → Fonts to use them here.'
+    : 'Sign in and add fonts to the Brand Kit to use your own.';
 }
 
 $('fontFamily').addEventListener('change', showFontNote);
@@ -691,7 +727,7 @@ API.optionalSession({
           })
           .catch(() => {});
       });
-      buildFontSelect();
+      buildFontSelects();
 
       const colours = (assets || []).filter((a) => a.kind === 'colour');
       if (!colours.length) return;
@@ -718,6 +754,6 @@ API.optionalSession({
 /* ---------- init ---------- */
 seed();
 buildFields();
-showFontNote();
+buildFontSelects();
 refresh();
 ensureArt();
