@@ -903,13 +903,23 @@ button.ghost:hover { color: #ff6b6b; border-color: #ff6b6b; }
   padding: 14px;
   margin-bottom: 14px;
 }
-.card-stage canvas {
+.card-stage iframe {
   display: block;
-  max-width: 100%;
-  height: auto;
+  width: 100%;
+  height: 620px;
+  border: 0;
   border-radius: 6px;
+  background: #fff;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+  transition: width 0.2s;
 }
+/* Narrows the frame itself, so the email's own media query and fluid
+   widths do the work — the same way a phone would trigger them. */
+.card-stage.is-phone { justify-content: center; }
+.card-stage.is-phone iframe { width: 380px; max-width: 100%; }
+
+.device-toggle { display: flex; gap: 6px; }
+.device-toggle .tab { padding: 6px 12px; font-size: 12.5px; }
 
 /* Swatches pulled from the Brand Kit, click to use as the accent. */
 .brand-chip {

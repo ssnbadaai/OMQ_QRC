@@ -1,31 +1,28 @@
 /* ============================================================
    OMQ Email Cards
 
-   Cards are drawn on a canvas rather than laid out in HTML. Two
-   reasons: what you see is exactly what exports, and email clients
-   mangle CSS but never mangle a PNG.
+   The card is real HTML, not a picture of one: the address is a
+   mailto link, the text can be selected, translated and read aloud,
+   and it reflows to the screen it is opened on.
 
-   Adding a card type is one entry in TEMPLATES — a list of fields and
-   a draw function. Everything else (photo, colours, type, language,
-   export) is shared.
+   Which means writing for email clients, not browsers. Outlook still
+   renders with Word, and Gmail strips much of what it is given, so:
+   tables for layout, styles inline, and width driven by
+   width:100% + max-width so it adapts even where media queries are
+   thrown away.
 
-   Arabic is a layout direction, not a translation: the canvas text
-   engine shapes and orders the glyphs, and `mirror` below flips the
-   alignment and the footer order to match.
+   Adding a card type is one entry in TEMPLATES.
    ============================================================ */
 
 const $ = (id) => document.getElementById(id);
 const API = window.OMQ_API;
 
-/* All geometry is expressed against this width and scaled on export,
-   so one set of numbers describes every output size. */
-const BASE_W = 1200;
+const WIDTH = 600; // the width every email design settled on, long ago
 
-const FONTS = [
-  { id: 'serif', label: 'Serif', stack: 'Georgia, "Times New Roman", "Noto Naskh Arabic", serif' },
-  { id: 'sans', label: 'Sans', stack: '"Segoe UI", system-ui, -apple-system, "Noto Sans Arabic", Arial, sans-serif' },
-  { id: 'mono', label: 'Mono', stack: '"Courier New", ui-monospace, monospace' },
-];
+const FAMILIES = {
+  serif: "Georgia, 'Times New Roman', 'Noto Naskh Arabic', serif",
+  sans: "Arial, Helvetica, 'Noto Sans Arabic', sans-serif",
+};
 
 /* ============================================================
    Templates
@@ -44,14 +41,11 @@ const TEMPLATES = {
         ar: 'يسعدنا انضمامك إلينا، ونتطلع إلى ما ستضيفينه للفريق. نتمنى لك كل التوفيق في هذه الرحلة الجديدة!' },
       { id: 'contactLabel', label: 'Contact label', type: 'text',
         en: 'Reach her through:', ar: 'للتواصل معها:' },
-      { id: 'contact', label: 'Email or phone', type: 'text',
+      { id: 'contact', label: 'Email, phone or link', type: 'text',
         en: 'nooralhuda@omqpro.com', ar: 'nooralhuda@omqpro.com' },
     ],
-    draw: drawStackedCard,
   },
 
-  /* Same furniture, different words — which is the point of the
-     registry. Add the next card here. */
   farewell: {
     label: 'Farewell',
     file: 'farewell-card',
@@ -64,10 +58,9 @@ const TEMPLATES = {
         ar: 'شكراً على كل ما قدمته للفريق. نتمنى لك التوفيق في خطوتك القادمة، ونأمل أن تجمعنا الطرق مرة أخرى.' },
       { id: 'contactLabel', label: 'Contact label', type: 'text',
         en: 'Stay in touch:', ar: 'للبقاء على تواصل:' },
-      { id: 'contact', label: 'Email or phone', type: 'text',
+      { id: 'contact', label: 'Email, phone or link', type: 'text',
         en: 'nooralhuda@omqpro.com', ar: 'nooralhuda@omqpro.com' },
     ],
-    draw: drawStackedCard,
   },
 
   announcement: {
@@ -82,10 +75,9 @@ const TEMPLATES = {
         ar: 'اكتب الخبر هنا. اجعله في أسطر قليلة — بطاقة البريد تُقرأ بنظرة سريعة.' },
       { id: 'contactLabel', label: 'Contact label', type: 'text',
         en: 'Find out more:', ar: 'لمعرفة المزيد:' },
-      { id: 'contact', label: 'Email or link', type: 'text',
+      { id: 'contact', label: 'Email, phone or link', type: 'text',
         en: 'hello@omqpro.com', ar: 'hello@omqpro.com' },
     ],
-    draw: drawStackedCard,
   },
 };
 
@@ -94,273 +86,183 @@ const TEMPLATES = {
    ============================================================ */
 let template = 'welcome';
 let lang = 'en';
-let values = {}; // values[template][lang][fieldId]
-let photo = null;
-let badge = null;
-let logo = null;
-let brandFonts = [];
+let values = {};
+let photoUrl = '';
 
 const isRTL = () => lang === 'ar';
 
+/* Mail clients need somewhere to fetch an image from, so every URL in
+   the markup has to be absolute. */
+const absolute = (u) => (!u ? '' : /^https?:\/\//i.test(u) ? u : new URL(u, location.href).href);
+
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/* The whole point of not shipping a picture: this has to be clickable,
+   and what it should do depends on what was typed. */
+function linkFor(value) {
+  const v = String(value || '').trim();
+  if (!v) return '';
+  if (/^https?:\/\//i.test(v)) return v;
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return 'mailto:' + v;
+  if (/^[+\d][\d\s()-]{5,}$/.test(v)) return 'tel:' + v.replace(/[^\d+]/g, '');
+  if (/^[\w.-]+\.[a-z]{2,}(\/|$)/i.test(v)) return 'https://' + v;
+  return '';
+}
+
 /* ============================================================
-   Canvas helpers
+   The email
    ============================================================ */
-function font(stack, size, weight) {
-  return `${weight || 400} ${size}px ${stack}`;
+function cardHtml(s, forClipboard) {
+  const dir = isRTL() ? 'rtl' : 'ltr';
+  const side = isRTL() ? 'right' : 'left';
+  const family = FAMILIES[s.family];
+  const h1 = s.headingSize;
+  const bodySize = Math.max(15, Math.round(h1 * 0.47));
+  const radius = s.round ? 14 : 0;
+
+  const heading = [s.heading, s.person].filter(Boolean).join(' ');
+  const href = linkFor(s.contact);
+
+  const photo = s.photo
+    ? `<img src="${esc(s.photo)}" width="${WIDTH - 56}" alt=""
+             style="display:block;width:100%;max-width:${WIDTH - 56}px;height:auto;border:0;
+                    outline:none;text-decoration:none;border-radius:6px;" />`
+    : `<div style="background:rgba(255,255,255,.09);border-radius:6px;padding:64px 12px;
+                   color:rgba(255,255,255,.55);font:15px ${family};text-align:center;">
+         Add a photo
+       </div>`;
+
+  /* Paragraphs, not <br>, so the text reflows on a narrow screen. */
+  const body = String(s.body || '')
+    .split(/\n+/)
+    .filter(Boolean)
+    .map(
+      (p) =>
+        `<p style="margin:0 0 14px;font:${bodySize}px/1.62 ${family};color:${s.ink};">${esc(p)}</p>`
+    )
+    .join('');
+
+  const contact = href
+    ? `<a href="${esc(href)}" style="color:${s.accent};text-decoration:none;">${esc(s.contact)}</a>`
+    : esc(s.contact);
+
+  /* A one-row table, so the pieces sit apart without flexbox. */
+  const footer = `
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="${side}" style="font:13px ${family};color:${s.muted};" width="33%">
+                    ${s.badge ? `<img src="${esc(s.badge)}" height="46" alt="" style="display:block;border:0;height:46px;width:auto;" />` : '&nbsp;'}
+                  </td>
+                  <td align="center" width="34%">
+                    ${s.logo ? `<img src="${esc(s.logoUrl)}" height="46" alt="OMQ" style="display:block;border:0;height:46px;width:auto;" />` : '&nbsp;'}
+                  </td>
+                  <td width="33%">&nbsp;</td>
+                </tr>
+              </table>`;
+
+  const rule = s.rule
+    ? `<tr><td style="padding:0 32px;">
+         <div style="height:4px;background:${s.accent};border-radius:3px;font-size:0;line-height:0;">&nbsp;</div>
+       </td></tr>`
+    : '';
+
+  /* Outlook renders with Word and ignores max-width, so it is given a
+     fixed-width table of its own inside a conditional comment. Every
+     other client sees only the fluid one. */
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="width:100%;background:${s.page};margin:0;padding:0;" dir="${dir}">
+  <tr>
+    <td align="center" style="padding:24px 12px;">
+      <!--[if mso]><table role="presentation" width="${WIDTH}" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+      <table role="presentation" width="${WIDTH}" cellpadding="0" cellspacing="0" border="0"
+             class="omq-card"
+             style="width:100%;max-width:${WIDTH}px;background:${s.paper};border-radius:${radius}px;
+                    overflow:hidden;border-collapse:separate;">
+        <tr>
+          <td align="center" style="background:${s.dark};padding:28px;">
+            ${photo}
+          </td>
+        </tr>
+        <tr>
+          <td class="omq-pad" align="${side}" style="padding:34px 32px 6px;" dir="${dir}">
+            <h1 style="margin:0 0 14px;font:${h1}px/1.2 ${family};font-weight:400;color:${s.ink};">${esc(heading)}</h1>
+            ${body}
+            <p style="margin:16px 0 0;font:${bodySize}px/1.6 ${family};color:${s.ink};">
+              <strong>${esc(s.contactLabel)}</strong>
+              <span style="white-space:nowrap;">${contact}</span>
+            </p>
+          </td>
+        </tr>
+        ${rule}
+        <tr>
+          <td class="omq-pad" style="padding:22px 32px 28px;">
+${footer}
+          </td>
+        </tr>
+      </table>
+      <!--[if mso]></td></tr></table><![endif]-->
+    </td>
+  </tr>
+</table>`;
 }
 
-/* Word wrap by measurement. Splitting on whitespace works for Arabic
-   as well — the shaping happens inside a run, not across spaces. */
-function wrap(ctx, text, maxWidth) {
-  const out = [];
-  for (const para of String(text).split(/\n+/)) {
-    const words = para.split(/\s+/).filter(Boolean);
-    let line = '';
-    for (const w of words) {
-      const test = line ? line + ' ' + w : w;
-      if (line && ctx.measureText(test).width > maxWidth) {
-        out.push(line);
-        line = w;
-      } else {
-        line = test;
-      }
-    }
-    out.push(line);
-  }
-  return out;
-}
+/* The media query is an improvement, never the mechanism — Gmail on a
+   non-Google account throws it away, and the fluid widths still hold. */
+const MEDIA = `
+    @media only screen and (max-width:600px) {
+      .omq-card h1 { font-size: 26px !important; }
+      .omq-pad { padding-left: 20px !important; padding-right: 20px !important; }
+    }`;
 
-/* One place decides which edge text starts from, so no drawing code
-   has to think about direction. */
-function align(ctx, box) {
-  if (isRTL()) {
-    ctx.direction = 'rtl';
-    ctx.textAlign = 'right';
-    return box.x + box.w;
-  }
-  ctx.direction = 'ltr';
-  ctx.textAlign = 'left';
-  return box.x;
-}
-
-function drawLines(ctx, lines, x, y, lineHeight) {
-  lines.forEach((line, i) => ctx.fillText(line, x, y + i * lineHeight));
-  return y + lines.length * lineHeight;
-}
-
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  if (ctx.roundRect) ctx.roundRect(x, y, w, h, r);
-  else ctx.rect(x, y, w, h);
-}
-
-/* Cover-fit, the CSS object-fit: cover rule done by hand. */
-function drawCover(ctx, img, x, y, w, h, offsetY, zoom) {
-  const iw = img.naturalWidth || img.width;
-  const ih = img.naturalHeight || img.height;
-  if (!iw || !ih) return;
-
-  const scale = Math.max(w / iw, h / ih) * zoom;
-  const dw = iw * scale;
-  const dh = ih * scale;
-  const dx = x + (w - dw) / 2;
-  /* offsetY 0..1 chooses which slice of a tall photo shows. */
-  const dy = y + (h - dh) * offsetY;
-
-  ctx.save();
-  roundRect(ctx, x, y, w, h, 0);
-  ctx.clip();
-  ctx.drawImage(img, dx, dy, dw, dh);
-  ctx.restore();
-}
-
-function zigzag(ctx, x, y, w, rows, colour) {
-  const step = w / 7;
-  ctx.save();
-  ctx.strokeStyle = colour;
-  ctx.lineWidth = step * 0.28;
-  ctx.lineCap = 'square';
-  for (let r = 0; r < rows; r++) {
-    const top = y + r * step * 0.95;
-    ctx.beginPath();
-    for (let i = 0; i <= 7; i++) {
-      const px = x + i * step;
-      const py = top + (i % 2 === 0 ? 0 : step * 0.55);
-      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
-    }
-    ctx.stroke();
-  }
-  ctx.restore();
-}
-
-/* ============================================================
-   The card
-
-   Header band with the photo, then the message, then a footer strip.
-   Only the alignment and the footer order change for Arabic.
-   ============================================================ */
-function drawStackedCard(ctx, s, measureOnly) {
-  const W = BASE_W;
-  const pad = 72;
-  const inner = W - pad * 2;
-
-  const headFont = fontStack($('headingFont').value);
-  const bodyFont = fontStack($('bodyFont').value);
-  const headSize = Number($('headingSize').value);
-  const bodySize = Math.round(headSize * 0.44);
-
-  /* ---- measure the text so the card grows with its content ---- */
-  ctx.font = font(headFont, headSize, 400);
-  const headingLines = wrap(ctx, [s.heading, s.person].filter(Boolean).join(' '), inner);
-
-  ctx.font = font(bodyFont, bodySize, 400);
-  const bodyLines = wrap(ctx, s.body, inner);
-
-  const headLH = headSize * 1.16;
-  const bodyLH = bodySize * 1.5;
-
-  const bandH = Math.round(W * 0.39);
-  const textTop = bandH + 64;
-  const contactH = bodySize * 2.4;
-  const footerH = 150;
-
-  const height = Math.round(
-    textTop + headingLines.length * headLH + 26 + bodyLines.length * bodyLH + contactH + footerH
-  );
-
-  if (measureOnly) return height;
-
-  /* ---- header band ---- */
-  ctx.fillStyle = s.paper;
-  ctx.fillRect(0, 0, W, height);
-
-  ctx.fillStyle = s.dark;
-  ctx.fillRect(0, 0, W, bandH);
-
-  if (s.showGlow) {
-    /* Soft blooms behind the photo, as in the reference. */
-    const blob = (cx, cy, r, colour) => {
-      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-      g.addColorStop(0, colour);
-      g.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, W, bandH);
-    };
-    blob(W * 0.06, bandH * 0.34, W * 0.3, hexToRgba(s.accent, 0.75));
-    blob(W * 0.94, bandH * 0.2, W * 0.26, hexToRgba(s.accent, 0.45));
-    blob(W * 0.5, -bandH * 0.2, W * 0.42, 'rgba(255,255,255,0.14)');
-  }
-
-  const photoBox = { x: pad, y: 44, w: inner, h: bandH - 130 };
-  ctx.save();
-  if (s.mono && photo) ctx.filter = 'grayscale(1)';
-  if (photo) {
-    drawCover(ctx, photo, photoBox.x, photoBox.y, photoBox.w, photoBox.h, s.photoY, s.photoZoom);
-  } else {
-    ctx.fillStyle = 'rgba(255,255,255,0.09)';
-    ctx.fillRect(photoBox.x, photoBox.y, photoBox.w, photoBox.h);
-    ctx.filter = 'none';
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.font = font(FONTS[1].stack, 26, 400);
-    ctx.direction = 'ltr';
-    ctx.textAlign = 'center';
-    ctx.fillText('Add a photo', W / 2, photoBox.y + photoBox.h / 2);
-  }
-  ctx.restore();
-
-  /* ---- message ---- */
-  const box = { x: pad, y: textTop, w: inner };
-  let x = align(ctx, box);
-  let y = textTop;
-
-  ctx.fillStyle = s.ink;
-  ctx.font = font(headFont, headSize, 400);
-  ctx.textBaseline = 'top';
-  y = drawLines(ctx, headingLines, x, y, headLH) + 26;
-
-  ctx.font = font(bodyFont, bodySize, 400);
-  ctx.fillStyle = hexToRgba(s.ink, 0.86);
-  y = drawLines(ctx, bodyLines, x, y, bodyLH) + bodySize * 0.7;
-
-  /* ---- contact line: bold label, accent value ---- */
-  const labelFont = font(bodyFont, bodySize, 700);
-  const valueFont = font(bodyFont, bodySize, 400);
-
-  ctx.font = labelFont;
-  const labelW = ctx.measureText(s.contactLabel).width;
-  ctx.font = valueFont;
-  const valueW = ctx.measureText(s.contact).width;
-  const gap = bodySize * 0.4;
-
-  /* Laid out as one run so the two parts stay together when mirrored. */
-  ctx.textAlign = 'left';
-  ctx.direction = isRTL() ? 'rtl' : 'ltr';
-  const runStart = isRTL() ? pad + inner - (labelW + gap + valueW) : pad;
-
-  ctx.font = labelFont;
-  ctx.fillStyle = s.ink;
-  ctx.fillText(s.contactLabel, runStart, y);
-
-  ctx.font = valueFont;
-  ctx.fillStyle = s.accent;
-  ctx.fillText(s.contact, runStart + labelW + gap, y);
-
-  /* ---- footer ---- */
-  const fy = height - footerH + 24;
-  const badgeH = 96;
-
-  /* Mirrored: badge and zigzag swap sides so the card reads outward
-     from the text edge in both directions. */
-  const badgeX = isRTL() ? W - pad - badgeH * 2 : pad;
-  const zigX = isRTL() ? pad : W - pad - 190;
-
-  if (badge) {
-    const ratio = (badge.naturalWidth || 1) / (badge.naturalHeight || 1);
-    ctx.drawImage(badge, badgeX, fy, badgeH * ratio, badgeH);
-  }
-  if (s.showLogo && logo) {
-    const ratio = (logo.naturalWidth || 1) / (logo.naturalHeight || 1);
-    const lh = 104;
-    ctx.drawImage(logo, W / 2 - (lh * ratio) / 2, fy - 4, lh * ratio, lh);
-  }
-  if (s.showZigzag) {
-    zigzag(ctx, zigX, fy + 18, 190, 3, s.accent);
-  }
-
-  return height;
-}
-
-function fontStack(id) {
-  const brand = brandFonts.find((f) => 'brand-' + f.id === id);
-  if (brand) return `"omq-card-${brand.id}", Georgia, serif`;
-  return (FONTS.find((f) => f.id === id) || FONTS[0]).stack;
-}
-
-function hexToRgba(hex, a) {
-  const h = hex.replace('#', '');
-  const n = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16);
-  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+function fullDocument(s) {
+  return `<!DOCTYPE html>
+<html lang="${lang}" dir="${isRTL() ? 'rtl' : 'ltr'}">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="x-apple-disable-message-reformatting" />
+<title>${esc(state().heading)}</title>
+<style>
+    body { margin:0; padding:0; width:100% !important; background:${s.page}; }
+    img { -ms-interpolation-mode:bicubic; }
+    a { text-decoration:none; }${MEDIA}
+</style>
+</head>
+<body style="margin:0;padding:0;background:${s.page};">
+${cardHtml(s)}
+</body>
+</html>`;
 }
 
 /* ============================================================
-   Render
+   State and preview
    ============================================================ */
 function state() {
   const v = (values[template] && values[template][lang]) || {};
   const paper = $('paperColor').value;
+  const light = isLight(paper);
   return {
     ...v,
+    photo: absolute(photoUrl),
+    badge: absolute($('badgeUrl').value.trim()),
+    logo: $('showLogo').checked,
+    logoUrl: absolute('IMG/omq-logo.png'),
+    rule: $('showRule').checked,
+    round: $('roundCard').checked,
     paper,
+    page: $('pageColor').value,
     dark: $('darkColor').value,
     accent: $('accentColor').value,
-    /* Readable text on whatever paper colour was chosen. */
-    ink: isLight(paper) ? '#14171f' : '#f4f6ff',
-    mono: $('photoMono').checked,
-    photoY: Number($('photoY').value) / 100,
-    photoZoom: Number($('photoZoom').value) / 100,
-    showGlow: $('showGlow').checked,
-    showZigzag: $('showZigzag').checked,
-    showLogo: $('showLogo').checked,
+    ink: light ? '#14171f' : '#f4f6ff',
+    muted: light ? '#6a7080' : '#aab',
+    family: $('fontFamily').value,
+    headingSize: Number($('headingSize').value),
   };
 }
 
@@ -370,66 +272,23 @@ function isLight(hex) {
   return (((n >> 16) & 255) * 299 + ((n >> 8) & 255) * 587 + (n & 255) * 114) / 1000 > 145;
 }
 
-function render(target, width) {
-  const canvas = target || $('cardCanvas');
-  const scale = (width || BASE_W) / BASE_W;
-  const ctx = canvas.getContext('2d');
-  const s = state();
-  const spec = TEMPLATES[template];
-
-  /* Measure at base scale, then draw once at the real size. */
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  const height = spec.draw(ctx, s, true);
-
-  canvas.width = Math.round(BASE_W * scale);
-  canvas.height = Math.round(height * scale);
-
-  const c2 = canvas.getContext('2d');
-  c2.setTransform(scale, 0, 0, scale, 0, 0);
-  c2.textBaseline = 'top';
-  spec.draw(c2, s, false);
-
-  return canvas;
-}
-
 let pending = null;
 function refresh() {
   clearTimeout(pending);
-  pending = setTimeout(() => render(), 60);
+  pending = setTimeout(() => {
+    $('cardFrame').srcdoc = fullDocument(state());
+  }, 80);
 }
 
 /* ============================================================
    Controls
    ============================================================ */
-function buildTemplateSelect() {
-  $('templateSelect').innerHTML = '';
-  Object.entries(TEMPLATES).forEach(([id, spec]) => {
-    const opt = document.createElement('option');
-    opt.value = id;
-    opt.textContent = spec.label;
-    $('templateSelect').appendChild(opt);
-  });
-}
-
-function buildFontSelects() {
-  [$('headingFont'), $('bodyFont')].forEach((sel, i) => {
-    const chosen = sel.value;
-    sel.innerHTML = '';
-    FONTS.forEach((f) => {
-      const o = document.createElement('option');
-      o.value = f.id;
-      o.textContent = f.label;
-      sel.appendChild(o);
-    });
-    brandFonts.forEach((f) => {
-      const o = document.createElement('option');
-      o.value = 'brand-' + f.id;
-      o.textContent = f.name + ' — Brand Kit';
-      sel.appendChild(o);
-    });
-    sel.value = chosen || (i === 0 ? 'serif' : 'sans');
-  });
-}
+Object.entries(TEMPLATES).forEach(([id, spec]) => {
+  const o = document.createElement('option');
+  o.value = id;
+  o.textContent = spec.label;
+  $('templateSelect').appendChild(o);
+});
 
 /* Each template keeps its own text per language, so switching to
    Arabic and back does not lose what was typed. */
@@ -459,8 +318,7 @@ function buildFields() {
     else input.type = 'text';
 
     input.value = values[template][lang][f.id] || '';
-    /* Let the field itself read the way it will print. */
-    input.dir = isRTL() ? 'rtl' : 'ltr';
+    input.dir = isRTL() ? 'rtl' : 'ltr'; // read the way it will print
     input.addEventListener('input', () => {
       values[template][lang][f.id] = input.value;
       refresh();
@@ -483,105 +341,116 @@ $('langSelect').addEventListener('change', () => {
   refresh();
 });
 
-['accentColor', 'darkColor', 'paperColor', 'photoMono', 'showGlow', 'showZigzag', 'showLogo',
- 'headingFont', 'bodyFont'].forEach((id) => $(id).addEventListener('input', refresh));
+['accentColor', 'darkColor', 'paperColor', 'pageColor', 'fontFamily',
+ 'showLogo', 'showRule', 'roundCard', 'badgeUrl'].forEach((id) =>
+  $(id).addEventListener('input', refresh)
+);
 
-[['photoY', 'photoYVal', '%'], ['photoZoom', 'photoZoomVal', '%'], ['headingSize', 'headingSizeVal', '']]
-  .forEach(([id, out, unit]) => {
-    $(id).addEventListener('input', () => {
-      $(out).textContent = $(id).value + unit;
-      refresh();
-    });
-  });
+$('headingSize').addEventListener('input', () => {
+  $('headingSizeVal').textContent = $('headingSize').value + ' px';
+  refresh();
+});
 
-/* ---------- images ---------- */
-function loadImage(file, onload) {
-  const reader = new FileReader();
-  reader.onload = () => {
-    const img = new Image();
-    img.onload = () => onload(img);
-    img.onerror = () => say('⚠ That file could not be read as an image.', 'warn');
-    img.src = reader.result;
-  };
-  reader.readAsDataURL(file);
-}
+/* ---------- device toggle ---------- */
+$('deviceToggle').addEventListener('click', (e) => {
+  const btn = e.target.closest('.tab');
+  if (!btn) return;
+  document.querySelectorAll('#deviceToggle .tab').forEach((t) => t.classList.toggle('active', t === btn));
+  $('cardStage').classList.toggle('is-phone', btn.dataset.device === 'phone');
+});
 
-$('photoInput').addEventListener('change', (e) => {
+/* ---------- photo ----------
+   Uploaded to the server rather than inlined: a data: URI shows fine
+   in this preview and then fails in the recipient's inbox, which is
+   the worst possible time to find out. */
+$('photoInput').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  loadImage(file, (img) => {
-    photo = img;
+
+  if (!API.isSignedIn()) {
+    say($('photoStatus'),
+      'Sign in to host the photo — mail clients will not show one pasted inline.', 'warn');
+    $('photoStatus').innerHTML +=
+      ` <a href="${API.loginUrl()}">Sign in</a>`;
+    $('photoInput').value = '';
+    return;
+  }
+
+  $('photoText').textContent = 'Uploading…';
+  try {
+    const form = new FormData();
+    form.append('kind', 'photo');
+    form.append('name', file.name);
+    form.append('file', file);
+
+    const { asset } = await API.assets.upload(form);
+    photoUrl = asset.url;
+    $('photoUrl').value = absolute(asset.url);
     $('photoText').textContent = '✓ ' + file.name;
-    $('removePhotoBtn').classList.remove('hidden');
+    say($('photoStatus'), '✓ Hosted — recipients will see it.', 'ok');
     refresh();
-  });
+  } catch (err) {
+    $('photoText').textContent = 'Choose a photo';
+    say($('photoStatus'), '⚠ ' + err.message, 'warn');
+  }
 });
 
-$('removePhotoBtn').addEventListener('click', () => {
-  photo = null;
-  $('photoInput').value = '';
-  $('photoText').textContent = 'Choose a photo';
-  $('removePhotoBtn').classList.add('hidden');
+$('photoUrl').addEventListener('input', () => {
+  photoUrl = $('photoUrl').value.trim();
   refresh();
 });
 
-$('badgeInput').addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  loadImage(file, (img) => {
-    badge = img;
-    $('badgeText').textContent = '✓ ' + file.name;
-    $('removeBadgeBtn').classList.remove('hidden');
-    refresh();
-  });
-});
-
-$('removeBadgeBtn').addEventListener('click', () => {
-  badge = null;
-  $('badgeInput').value = '';
-  $('badgeText').textContent = 'Corner badge — optional artwork';
-  $('removeBadgeBtn').classList.add('hidden');
-  refresh();
-});
+function say(el, message, kind) {
+  el.textContent = message;
+  el.className = 'status' + (kind ? ' status-' + kind : '');
+}
 
 /* ---------- export ---------- */
-function say(message, kind) {
-  $('exportStatus').textContent = message;
-  $('exportStatus').className = 'status' + (kind ? ' status-' + kind : '');
-}
-
 function fileName() {
-  const typed = $('fileName').value.trim();
-  const base = typed || TEMPLATES[template].file;
-  return base.replace(/[^\w\- ]+/g, '').replace(/\s+/g, '-') || 'omq-card';
+  return (TEMPLATES[template].file || 'omq-card') + (isRTL() ? '-ar' : '');
 }
 
-function exportCanvas() {
-  const out = document.createElement('canvas');
-  return render(out, Number($('exportWidth').value));
-}
-
-$('downloadBtn').addEventListener('click', () => {
-  exportCanvas().toBlob((blob) => {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = fileName() + '.png';
-    a.click();
-    URL.revokeObjectURL(a.href);
-    say('✓ Downloaded ' + a.download, 'ok');
-  }, 'image/png');
+/* text/html on the clipboard is what makes a paste into Gmail arrive
+   as a card rather than as a wall of angle brackets. */
+$('copyRichBtn').addEventListener('click', async () => {
+  const html = cardHtml(state());
+  try {
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        'text/html': new Blob([html], { type: 'text/html' }),
+        'text/plain': new Blob([stripTags(html)], { type: 'text/plain' }),
+      }),
+    ]);
+    say($('exportStatus'), '✓ Copied. Paste into Gmail or Outlook.', 'ok');
+  } catch {
+    say($('exportStatus'),
+      'This browser will not copy rich text. Use Copy HTML, or download the file.', 'warn');
+  }
 });
 
-$('copyBtn').addEventListener('click', () => {
-  exportCanvas().toBlob(async (blob) => {
-    try {
-      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-      say('✓ Copied — paste it into your email.', 'ok');
-    } catch {
-      /* Firefox and older Safari have no image clipboard write. */
-      say('This browser cannot copy images. Download it instead.', 'warn');
-    }
-  }, 'image/png');
+function stripTags(html) {
+  const d = document.createElement('div');
+  d.innerHTML = html;
+  return (d.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+$('copyHtmlBtn').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(fullDocument(state()));
+    say($('exportStatus'), '✓ HTML copied — paste into your mail template.', 'ok');
+  } catch {
+    say($('exportStatus'), 'Could not reach the clipboard. Download the file instead.', 'warn');
+  }
+});
+
+$('downloadBtn').addEventListener('click', () => {
+  const blob = new Blob([fullDocument(state())], { type: 'text/html' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fileName() + '.html';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  say($('exportStatus'), '✓ Downloaded ' + a.download, 'ok');
 });
 
 /* ---------- optional Brand Kit ---------- */
@@ -590,35 +459,22 @@ API.optionalSession({
   onIn: async () => {
     try {
       const { assets } = await API.assets.list();
-
-      brandFonts = (assets || []).filter((a) => a.kind === 'font');
-      brandFonts.forEach((f) => {
-        new FontFace(`omq-card-${f.id}`, `url(${JSON.stringify(f.url)})`)
-          .load()
-          .then((face) => {
-            document.fonts.add(face);
-            refresh();
-          })
-          .catch(() => {});
-      });
-      buildFontSelects();
-
       const colours = (assets || []).filter((a) => a.kind === 'colour');
-      if (colours.length) {
-        $('brandColours').classList.remove('hidden');
-        $('brandColours').innerHTML = 'Brand Kit: ';
-        colours.forEach((c) => {
-          const chip = document.createElement('button');
-          chip.className = 'brand-chip plain';
-          chip.style.background = c.value;
-          chip.title = `${c.name} — ${c.value}, click to use as accent`;
-          chip.addEventListener('click', () => {
-            $('accentColor').value = c.value.toLowerCase();
-            refresh();
-          });
-          $('brandColours').appendChild(chip);
+      if (!colours.length) return;
+
+      $('brandColours').classList.remove('hidden');
+      $('brandColours').textContent = 'Brand Kit: ';
+      colours.forEach((c) => {
+        const chip = document.createElement('button');
+        chip.className = 'brand-chip plain';
+        chip.style.background = c.value;
+        chip.title = `${c.name} — ${c.value}, click to use as accent`;
+        chip.addEventListener('click', () => {
+          $('accentColor').value = c.value.toLowerCase();
+          refresh();
         });
-      }
+        $('brandColours').appendChild(chip);
+      });
     } catch {
       /* The card tool works perfectly well without the Brand Kit. */
     }
@@ -626,13 +482,6 @@ API.optionalSession({
 });
 
 /* ---------- init ---------- */
-buildTemplateSelect();
-buildFontSelects();
 seed();
 buildFields();
-
-logo = new Image();
-logo.onload = refresh;
-logo.src = 'IMG/omq-logo.png';
-
-render();
+refresh();

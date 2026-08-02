@@ -30,6 +30,10 @@ const OMQ_ALLOWED = [
     'icon'     => ['svg', 'png', 'webp'],
     'template' => ['pdf', 'png', 'jpg', 'jpeg', 'svg', 'ai', 'psd', 'indd', 'sketch', 'fig', 'zip'],
     'font'     => ['woff2', 'woff', 'ttf', 'otf'],
+    /* Card photos. Stored here because an emailed image has to sit at a
+       public URL — mail clients refuse data: URIs — not because they
+       belong in the brand library. brand.html has no tab for them. */
+    'photo'    => ['png', 'jpg', 'jpeg', 'webp', 'gif'],
 ];
 
 const OMQ_MAX_BYTES = 20 * 1024 * 1024; // 20 MB

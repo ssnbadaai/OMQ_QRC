@@ -51,20 +51,31 @@ works signed out; signing in adds *Save to Brand Kit*, which writes the palette
 straight into the colours tab.
 
 **Email Cards** ([`card.html`](card.html)) — the welcome-aboard card and its
-relatives. Drawn on a canvas rather than laid out in HTML, for two reasons:
-what you see is exactly what exports, and email clients mangle CSS but never
-mangle a PNG. Export is a download or a straight copy to the clipboard.
+relatives, as **real HTML rather than a picture of a card**. The address is a
+`mailto:` link, the text can be selected, searched, translated and read aloud,
+and it reflows to whatever screen it is opened on.
 
-Adding a card type is one entry in `TEMPLATES` — a label, a list of fields and
-a draw function. Photo, colours, type, language and export are shared, so the
-second card cost almost nothing and the third will cost less.
+That means writing for mail clients, not browsers. Outlook still renders with
+Word and Gmail strips much of what it is given, so the markup is tables, styles
+are inline, and width is `width:100%` with `max-width` — which adapts even
+where the media query is thrown away. Outlook gets a fixed-width table of its
+own inside an `[if mso]` conditional, since it ignores `max-width`.
+
+**Copy for email** puts `text/html` on the clipboard, so pasting into Gmail or
+Outlook produces a card rather than a wall of angle brackets. **Copy HTML** and
+the `.html` download are for pasting into a mail template or an ESP.
+
+Photos are uploaded to `assets/` and referenced by absolute URL. A `data:` URI
+previews perfectly here and then fails in the recipient's inbox — which is the
+worst possible moment to discover it — so the tool refuses to inline one.
+
+Adding a card type is one entry in `TEMPLATES`: a label and a list of fields.
+Everything else is shared.
 
 Arabic is treated as a layout direction, not a translation. Every template
-carries text in both languages and keeps them separately, so switching back and
-forth loses nothing. The canvas text engine shapes and orders the glyphs; one
-`align()` helper decides which edge a line starts from, and the footer order
-flips, so no drawing code has to reason about direction. Fonts from the Brand
-Kit are selectable, and its colours appear as one-click accent swatches.
+carries text in both languages and keeps them separate, so switching back and
+forth loses nothing typed. `dir` is set on the container and the alignment
+follows it, so the same markup serves both.
 
 The font side of Image Tools **compares** rather than identifies: it loads the Brand Kit fonts
 and renders your sample text beside the image, answering "is this one of ours,

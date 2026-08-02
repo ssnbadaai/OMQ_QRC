@@ -8,7 +8,7 @@
   <title>OMQ Email Cards</title>
   <link rel="icon" href="IMG/omq-logo.png" />
   <link rel="apple-touch-icon" href="IMG/omq-logo.png" />
-  <link rel="stylesheet" href="styles.css?v=7" />
+  <link rel="stylesheet" href="styles.css?v=8" />
 </head>
 <body>
 
@@ -27,30 +27,27 @@
 
     <!-- ============ PREVIEW ============ -->
     <section class="panel card-preview-panel">
-      <h2>Preview</h2>
-
-      <div class="card-stage">
-        <canvas id="cardCanvas"></canvas>
+      <div class="admin-header">
+        <h2>Preview</h2>
+        <div class="device-toggle" id="deviceToggle">
+          <button class="tab active" data-device="desktop">Desktop</button>
+          <button class="tab" data-device="phone">Phone</button>
+        </div>
       </div>
 
-      <div class="export-row">
-        <label>Width
-          <select id="exportWidth">
-            <option value="600">600 px — email body</option>
-            <option value="1200" selected>1200 px — retina</option>
-            <option value="1800">1800 px — print/social</option>
-          </select>
-        </label>
-        <label>File name
-          <input type="text" id="fileName" placeholder="welcome-card" />
-        </label>
+      <div class="card-stage" id="cardStage">
+        <iframe id="cardFrame" title="Email preview"></iframe>
       </div>
 
       <div class="actions">
-        <button id="downloadBtn">Download PNG</button>
-        <button id="copyBtn" class="secondary">Copy image</button>
+        <button id="copyRichBtn">Copy for email</button>
+        <button id="copyHtmlBtn" class="secondary">Copy HTML</button>
+        <button id="downloadBtn" class="secondary">.html</button>
       </div>
-      <p class="status" id="exportStatus">Paste straight into your email.</p>
+      <p class="status" id="exportStatus">
+        <b>Copy for email</b> then paste into Gmail or Outlook — it arrives as a
+        real card, not a picture.
+      </p>
     </section>
 
     <!-- ============ CONTENT ============ -->
@@ -81,22 +78,11 @@
         <input type="file" id="photoInput" accept="image/*" />
         <span id="photoText">Choose a photo</span>
       </label>
-      <div class="field-row">
-        <label class="checkbox-label">
-          <input type="checkbox" id="photoMono" checked /> Black and white
-        </label>
-        <button type="button" id="removePhotoBtn" class="ghost hidden">✕ Remove</button>
-      </div>
-      <div class="field-row">
-        <label>Position
-          <input type="range" id="photoY" min="0" max="100" step="1" value="50" />
-          <span class="range-val" id="photoYVal">50%</span>
-        </label>
-        <label>Zoom
-          <input type="range" id="photoZoom" min="100" max="220" step="2" value="100" />
-          <span class="range-val" id="photoZoomVal">100%</span>
-        </label>
-      </div>
+      <label>…or paste an image address
+        <input type="url" id="photoUrl" placeholder="https://…/photo.jpg"
+               autocapitalize="off" autocorrect="off" spellcheck="false" />
+      </label>
+      <p class="status" id="photoStatus"></p>
 
       <h3>Colours</h3>
       <div class="field-row">
@@ -106,46 +92,44 @@
         <label>Header
           <input type="color" id="darkColor" value="#141414" />
         </label>
-        <label>Background
+        <label>Card
           <input type="color" id="paperColor" value="#ffffff" />
+        </label>
+        <label>Page
+          <input type="color" id="pageColor" value="#f2f3f7" />
         </label>
       </div>
       <p class="muted-copy hidden" id="brandColours"></p>
 
       <h3>Type</h3>
       <div class="field-row">
-        <label>Heading
-          <select id="headingFont"></select>
+        <label>Family
+          <select id="fontFamily">
+            <option value="serif" selected>Serif — Georgia</option>
+            <option value="sans">Sans — Arial / Helvetica</option>
+          </select>
         </label>
-        <label>Body
-          <select id="bodyFont"></select>
-        </label>
-      </div>
-      <div class="field-row">
         <label>Heading size
-          <input type="range" id="headingSize" min="38" max="84" step="1" value="62" />
-          <span class="range-val" id="headingSizeVal">62</span>
+          <input type="range" id="headingSize" min="22" max="46" step="1" value="34" />
+          <span class="range-val" id="headingSizeVal">34 px</span>
         </label>
       </div>
 
       <h3>Elements</h3>
       <label class="checkbox-label">
-        <input type="checkbox" id="showGlow" checked /> Coloured glow behind the photo
+        <input type="checkbox" id="showLogo" checked /> OMQ logo in the footer
       </label>
       <label class="checkbox-label">
-        <input type="checkbox" id="showZigzag" checked /> Zigzag corner
+        <input type="checkbox" id="showRule" checked /> Accent rule
       </label>
       <label class="checkbox-label">
-        <input type="checkbox" id="showLogo" checked /> OMQ logo
+        <input type="checkbox" id="roundCard" checked /> Rounded corners
       </label>
 
-      <label class="file-label">
-        <input type="file" id="badgeInput" accept="image/*" />
-        <span id="badgeText">Corner badge — optional artwork</span>
+      <label>Footer artwork <span class="opt">optional, needs a public address</span>
+        <input type="url" id="badgeUrl" placeholder="https://…/badge.png"
+               autocapitalize="off" autocorrect="off" spellcheck="false" />
       </label>
-      <div class="field-row">
-        <button type="button" id="removeBadgeBtn" class="ghost hidden">✕ Remove badge</button>
-      </div>
     </section>
   </main>
 
@@ -153,7 +137,7 @@
     OMQ Email Cards · <a href="dev.html">Dev Tools</a> · <a href="index.html">Home</a>
   </footer>
 
-  <script src="api.js?v=7"></script>
-  <script src="card.js?v=7"></script>
+  <script src="api.js?v=8"></script>
+  <script src="card.js?v=8"></script>
 </body>
 </html>
