@@ -6,7 +6,6 @@
    the frame the user has scrubbed to.
    ============================================================ */
 
-const $ = (id) => document.getElementById(id);
 const API = window.OMQ_API;
 
 let source = null; // { el, kind: 'image' | 'video' }
@@ -16,26 +15,6 @@ let sampleData = null; // read at a higher resolution than the palette pass
 let brandFonts = [];
 
 /* ---------- helpers ---------- */
-function say(el, message, kind) {
-  el.textContent = message;
-  el.className = 'status' + (kind ? ' status-' + kind : '');
-}
-
-const hex = (r, g, b) =>
-  '#' + [r, g, b].map((v) => Math.round(v).toString(16).padStart(2, '0')).join('').toUpperCase();
-
-/* Perceived brightness, so label text stays readable on its swatch. */
-const isLight = ([r, g, b]) => (r * 299 + g * 587 + b * 114) / 1000 > 140;
-
-async function copy(text, statusEl) {
-  try {
-    await navigator.clipboard.writeText(text);
-    say(statusEl, '✓ Copied ' + text, 'ok');
-  } catch {
-    say(statusEl, text, null);
-  }
-}
-
 
 /* ============================================================
    Colours out of a PDF brand guideline
@@ -235,20 +214,7 @@ function revealTools() {
 $('sourceFile').addEventListener('change', (e) => loadFile(e.target.files[0]));
 
 /* Drag and drop onto the picker. */
-const drop = $('dropZone');
-['dragenter', 'dragover'].forEach((ev) =>
-  drop.addEventListener(ev, (e) => {
-    e.preventDefault();
-    drop.classList.add('is-over');
-  })
-);
-['dragleave', 'drop'].forEach((ev) =>
-  drop.addEventListener(ev, (e) => {
-    e.preventDefault();
-    drop.classList.remove('is-over');
-  })
-);
-drop.addEventListener('drop', (e) => loadFile(e.dataTransfer.files[0]));
+wireDropZone($('dropZone'), loadFile);
 
 /* Draw whatever is on screen now into a canvas we can read.
    Capped: a 4K frame is 8M pixels and quantising them all buys nothing
@@ -780,12 +746,8 @@ $('downloadStudyBtn').addEventListener('click', () => {
     return;
   }
   buildStudy().toBlob((blob) => {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'palette.png';
-    a.click();
-    URL.revokeObjectURL(a.href);
-    say($('paletteStatus'), '✓ Downloaded ' + a.download, 'ok');
+    saveBlob(blob, 'palette.png');
+    say($('paletteStatus'), '✓ Downloaded palette.png', 'ok');
   }, 'image/png');
 });
 
@@ -893,11 +855,7 @@ $('cropBtn').addEventListener('click', () => {
   canvas.height = data.height;
   canvas.getContext('2d').putImageData(data, 0, 0);
   canvas.toBlob((blob) => {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'font-sample.png';
-    a.click();
-    URL.revokeObjectURL(a.href);
+    saveBlob(blob, 'font-sample.png');
     say($('fontStatus'), '✓ Saved. Upload that file to WhatTheFont or Matcherator.', 'ok');
   }, 'image/png');
 });

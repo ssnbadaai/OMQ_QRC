@@ -4,36 +4,13 @@
    thing you can do with a link afterwards, not the point of it.
    ============================================================ */
 
-const $ = (id) => document.getElementById(id);
 const API = window.OMQ_API;
 
 let links = [];
 let filter = '';
 
 /* ---------- helpers ---------- */
-function say(el, message, kind) {
-  el.textContent = message;
-  el.className = 'status' + (kind ? ' status-' + kind : '');
-}
-
-function busy(button, isBusy, label) {
-  button.disabled = isBusy;
-  button.textContent = isBusy ? label : button.dataset.label;
-}
-
 const bare = (url) => String(url).replace(/^https?:\/\//, '');
-
-async function copy(text, statusEl) {
-  try {
-    await navigator.clipboard.writeText(text);
-    if (statusEl) say(statusEl, '✓ Copied ' + bare(text), 'ok');
-    return true;
-  } catch {
-    /* Blocked without a user gesture, or over plain http. */
-    if (statusEl) say(statusEl, text, null);
-    return false;
-  }
-}
 
 /* A rejected token means the hour is up — drop back to the sign-in
    screen instead of showing an error the user cannot act on. */

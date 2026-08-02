@@ -2,7 +2,6 @@
    OMQ QR Studio
    ============================================================ */
 
-const $ = (id) => document.getElementById(id);
 
 /* Rendered at this size and scaled down by CSS, so the preview stays crisp
    in the wide desktop column as well as on a phone. */

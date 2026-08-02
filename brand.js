@@ -6,7 +6,6 @@
    download path, and differ by a tab.
    ============================================================ */
 
-const $ = (id) => document.getElementById(id);
 const API = window.OMQ_API;
 
 const KINDS = {
@@ -22,16 +21,6 @@ let kind = 'logo';
 let filter = '';
 
 /* ---------- helpers ---------- */
-function say(el, message, kindOfMessage) {
-  el.textContent = message;
-  el.className = 'status' + (kindOfMessage ? ' status-' + kindOfMessage : '');
-}
-
-function busy(button, isBusy, label) {
-  button.disabled = isBusy;
-  button.textContent = isBusy ? label : button.dataset.label;
-}
-
 function size(bytes) {
   if (!bytes) return '';
   if (bytes < 1024) return bytes + ' B';
@@ -47,15 +36,6 @@ function handle(err, statusEl) {
     return;
   }
   say(statusEl, '⚠ ' + err.message, 'warn');
-}
-
-async function copy(text, statusEl) {
-  try {
-    await navigator.clipboard.writeText(text);
-    say(statusEl, '✓ Copied ' + text, 'ok');
-  } catch {
-    say(statusEl, text, null);
-  }
 }
 
 /* ---------- session ---------- */

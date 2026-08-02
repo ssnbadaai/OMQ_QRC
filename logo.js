@@ -11,23 +11,17 @@
    unless you ask for it to be saved.
    ============================================================ */
 
-const $ = (id) => document.getElementById(id);
 const API = window.OMQ_API;
 
 let source = null;      // ImageData of the file as loaded
 let working = null;     // ImageData after background + scale
 let svg = '';           // last trace result
-let busy = false;
+let running = false;
 let queued = false;
 
 /* ============================================================
    Small helpers
    ============================================================ */
-function say(el, message, kind) {
-  el.textContent = message;
-  el.className = 'status' + (kind ? ' status-' + kind : '');
-}
-
 function imageDataOf(img) {
   const c = document.createElement('canvas');
   c.width = img.naturalWidth;
@@ -43,9 +37,6 @@ function canvasOf(data) {
   c.getContext('2d').putImageData(data, 0, 0);
   return c;
 }
-
-const hex = (r, g, b) =>
-  '#' + [r, g, b].map((v) => Math.round(v).toString(16).padStart(2, '0')).join('').toUpperCase();
 
 /* ============================================================
    1. Background removal
@@ -340,7 +331,6 @@ function resample(src, dstW, dstH, a = 3) {
   }
 
   const pass = (input, iw, ih, ow, horizontal) => {
-    const oh = horizontal ? ih : ow;
     const outW = horizontal ? ow : iw;
     const outH = horizontal ? ih : ow;
     const out = new Float32Array(outW * outH * 4);
@@ -647,11 +637,11 @@ function vectorise(src, levels, detail, smoothing) {
    ============================================================ */
 async function run() {
   if (!source) return;
-  if (busy) {
+  if (running) {
     queued = true;
     return;
   }
-  busy = true;
+  running = true;
   say($('exportStatus'), 'Working…');
 
   /* Let the status paint before the main thread is tied up. */
@@ -700,7 +690,7 @@ async function run() {
   } catch (err) {
     say($('exportStatus'), '⚠ ' + err.message, 'warn');
   } finally {
-    busy = false;
+    running = false;
     if (queued) {
       queued = false;
       run();
@@ -738,20 +728,7 @@ function load(file) {
 
 $('sourceFile').addEventListener('change', (e) => load(e.target.files[0]));
 
-const drop = $('dropZone');
-['dragenter', 'dragover'].forEach((ev) =>
-  drop.addEventListener(ev, (e) => {
-    e.preventDefault();
-    drop.classList.add('is-over');
-  })
-);
-['dragleave', 'drop'].forEach((ev) =>
-  drop.addEventListener(ev, (e) => {
-    e.preventDefault();
-    drop.classList.remove('is-over');
-  })
-);
-drop.addEventListener('drop', (e) => load(e.dataTransfer.files[0]));
+wireDropZone($('dropZone'), load);
 
 [['tolerance', 'toleranceVal'], ['feather', 'featherVal'], ['sharpen', 'sharpenVal'],
  ['holeSize', 'holeSizeVal', '%'], ['defringe', 'defringeVal'],
@@ -775,17 +752,12 @@ drop.addEventListener('drop', (e) => load(e.dataTransfer.files[0]));
 
 /* ---------- export ---------- */
 const fileName = () =>
-  ($('fileName').value.trim() || $('fileName').placeholder || 'logo')
-    .replace(/[^\w\- ]+/g, '')
-    .replace(/\s+/g, '-') || 'logo';
+  safeName($('fileName').value || $('fileName').placeholder, 'logo');
 
 function download(blob, extension) {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = fileName() + '.' + extension;
-  a.click();
-  URL.revokeObjectURL(a.href);
-  say($('exportStatus'), '✓ Downloaded ' + a.download, 'ok');
+  const name = fileName() + '.' + extension;
+  saveBlob(blob, name);
+  say($('exportStatus'), '✓ Downloaded ' + name, 'ok');
 }
 
 $('downloadPng').addEventListener('click', () => {

@@ -14,7 +14,6 @@
    Adding a card type is one entry in TEMPLATES.
    ============================================================ */
 
-const $ = (id) => document.getElementById(id);
 const API = window.OMQ_API;
 
 const WIDTH = 600; // the width every email design settled on, long ago
@@ -301,7 +300,7 @@ async function ensureArt() {
 /* ============================================================
    The email
    ============================================================ */
-function cardHtml(s, forClipboard) {
+function cardHtml(s) {
   const dir = isRTL() ? 'rtl' : 'ltr';
   const side = isRTL() ? 'right' : 'left';
   const family = s.family;
@@ -470,12 +469,6 @@ function state() {
     family: fontOf($('fontFamily').value),
     headingSize: Number($('headingSize').value),
   };
-}
-
-function isLight(hex) {
-  const h = hex.replace('#', '');
-  const n = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16);
-  return (((n >> 16) & 255) * 299 + ((n >> 8) & 255) * 587 + (n & 255) * 114) / 1000 > 145;
 }
 
 let pending = null;
@@ -657,11 +650,6 @@ $('photoUrl').addEventListener('input', () => {
   refresh();
 });
 
-function say(el, message, kind) {
-  el.textContent = message;
-  el.className = 'status' + (kind ? ' status-' + kind : '');
-}
-
 /* ---------- export ---------- */
 function fileName() {
   return (TEMPLATES[template].file || 'omq-card') + (isRTL() ? '-ar' : '');
@@ -701,13 +689,9 @@ $('copyHtmlBtn').addEventListener('click', async () => {
 });
 
 $('downloadBtn').addEventListener('click', () => {
-  const blob = new Blob([fullDocument(state())], { type: 'text/html' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = fileName() + '.html';
-  a.click();
-  URL.revokeObjectURL(a.href);
-  say($('exportStatus'), '✓ Downloaded ' + a.download, 'ok');
+  const name = fileName() + '.html';
+  saveBlob(new Blob([fullDocument(state())], { type: 'text/html' }), name);
+  say($('exportStatus'), '✓ Downloaded ' + name, 'ok');
 });
 
 /* ---------- optional Brand Kit ---------- */

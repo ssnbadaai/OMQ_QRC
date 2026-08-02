@@ -5,7 +5,6 @@
    api.js returns you there once the server has accepted the account.
    ============================================================ */
 
-const $ = (id) => document.getElementById(id);
 const API = window.OMQ_API;
 
 const status = $('loginStatus');
