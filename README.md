@@ -53,7 +53,17 @@ delete would take out any white the design meant to keep. Alpha ramps down past
 the tolerance instead of stopping dead, so antialiased edges do not become a
 staircase.
 
-The consequence is that background sealed inside a shape is never reached: the
+An antialiased edge pixel is a mix — `C = a·F + (1-a)·B` — so removing the
+background from the image does not remove it from those pixels, and a dark mark
+keyed off a white page keeps a pale rim. **Defringe** takes it back out. Note
+that a half-and-half pixel sits halfway between artwork and background, far from
+*both*, so "is it close to the background" cannot find it; what identifies it is
+bordering what was removed. The artwork's colour comes from the nearest clean
+pixel, found by one outward sweep rather than a search per pixel, and projecting
+`C` onto the line from `B` to `F` gives `a` directly. The pixel then becomes `F`
+at that alpha — the real colour, with the antialiasing carried by transparency.
+
+The other consequence is that background sealed inside a shape is never reached: the
 white left in the middle of an **O**. A second pass measures each of those
 trapped regions on its own and clears the small ones, so letter counters go and
 a large intentional panel stays. **Keep**, **Clear small** and **Clear all**

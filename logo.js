@@ -57,7 +57,7 @@ const hex = (r, g, b) =>
    the edges can only remove background that is actually connected to
    the edge.
    ============================================================ */
-function removeBackground(src, tolerance, feather, enclosed, holeLimit) {
+function removeBackground(src, tolerance, feather, enclosed, holeLimit, defringe) {
   const { width: w, height: h } = src;
   const d = new Uint8ClampedArray(src.data);
   const cleared = new Uint8Array(w * h);
@@ -158,6 +158,126 @@ function removeBackground(src, tolerance, feather, enclosed, holeLimit) {
            does not walk the same region again. */
         found.forEach((q) => (cleared[q] = 1));
       }
+    }
+  }
+
+  /* ---- defringe ----------------------------------------------
+     An antialiased edge pixel is a mix: C = a*F + (1-a)*B, where B is
+     the background it was composited against and F the artwork's own
+     colour. Removing B from the image does not remove it from those
+     pixels, so a dark mark keyed off a white page keeps a white rim.
+
+     Note that a half-and-half pixel sits halfway between F and B — far
+     from *both* — so "is it close to the background" cannot find it.
+     What identifies it is position: it borders what was removed.
+
+     F is taken from the nearest pixel that was not part of the edge,
+     found by walking outwards from clean pixels so every edge pixel
+     gets the colour of the artwork it actually belongs to. Projecting
+     C onto the line from B to F then gives a directly, and the pixel
+     becomes F at that alpha: the artwork's colour, with the
+     antialiasing carried by transparency instead of by a pale rim. */
+  if (defringe > 0) {
+    const radius = Math.max(1, Math.round((defringe / 100) * 3));
+
+    /* The band: pixels within `radius` of anything made transparent. */
+    let band = new Uint8Array(w * h);
+    for (let p = 0; p < w * h; p++) {
+      if (d[p * 4 + 3] < 250) band[p] = 1;
+    }
+    for (let step = 0; step < radius; step++) {
+      const next = new Uint8Array(band);
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const p = y * w + x;
+          if (band[p]) continue;
+          if (
+            (x > 0 && band[p - 1]) ||
+            (x < w - 1 && band[p + 1]) ||
+            (y > 0 && band[p - w]) ||
+            (y < h - 1 && band[p + w])
+          ) next[p] = 1;
+        }
+      }
+      band = next;
+    }
+
+    /* Walk outwards from every clean opaque pixel, carrying its index,
+       so each band pixel ends up pointing at the nearest real colour.
+       One sweep for the whole image rather than a search per pixel. */
+    const nearest = new Int32Array(w * h).fill(-1);
+    let frontier = [];
+    for (let p = 0; p < w * h; p++) {
+      if (!band[p] && d[p * 4 + 3] > 250) {
+        nearest[p] = p;
+        frontier.push(p);
+      }
+    }
+
+    for (let step = 0; step <= radius + 1 && frontier.length; step++) {
+      const next = [];
+      for (const p of frontier) {
+        const x = p % w;
+        const y = (p / w) | 0;
+        const spread = (q) => {
+          if (nearest[q] === -1 && band[q]) {
+            nearest[q] = nearest[p];
+            next.push(q);
+          }
+        };
+        if (x > 0) spread(p - 1);
+        if (x < w - 1) spread(p + 1);
+        if (y > 0) spread(p - w);
+        if (y < h - 1) spread(p + w);
+      }
+      frontier = next;
+    }
+
+    const strength = defringe / 100;
+    const original = src.data;
+
+    for (let p = 0; p < w * h; p++) {
+      if (!band[p]) continue;
+
+      const i = p * 4;
+      const alpha = d[i + 3];
+      if (alpha === 0) continue;
+
+      const from = nearest[p];
+      if (from < 0) continue;
+      const fi = from * 4;
+
+      /* Read the blend from the untouched original: `d` may already
+         have been altered by an earlier pixel in this same pass. */
+      const C = [original[i], original[i + 1], original[i + 2]];
+      const F = [d[fi], d[fi + 1], d[fi + 2]];
+
+      /* Nearest reference is the background this pixel was mixed with. */
+      let B = refs[0];
+      let best = Infinity;
+      for (const ref of refs) {
+        const v = (C[0] - ref[0]) ** 2 + (C[1] - ref[1]) ** 2 + (C[2] - ref[2]) ** 2;
+        if (v < best) {
+          best = v;
+          B = ref;
+        }
+      }
+
+      /* a = how far C has travelled from B towards F. */
+      let dot = 0;
+      let span = 0;
+      for (let c = 0; c < 3; c++) {
+        dot += (C[c] - B[c]) * (F[c] - B[c]);
+        span += (F[c] - B[c]) ** 2;
+      }
+      if (span < 1) continue; // artwork the same colour as the page
+
+      const a = Math.max(0, Math.min(1, dot / span));
+
+      for (let c = 0; c < 3; c++) {
+        d[i + c] = C[c] + (F[c] - C[c]) * strength;
+      }
+      d[i + 3] = Math.round(alpha * (1 + (a - 1) * strength));
     }
   }
 
@@ -546,7 +666,8 @@ async function run() {
         Number($('tolerance').value),
         Number($('feather').value),
         $('enclosed').value,
-        Number($('holeSize').value)
+        Number($('holeSize').value),
+        Number($('defringe').value)
       );
     }
     if ($('trim').checked) data = trim(data);
@@ -633,7 +754,7 @@ const drop = $('dropZone');
 drop.addEventListener('drop', (e) => load(e.dataTransfer.files[0]));
 
 [['tolerance', 'toleranceVal'], ['feather', 'featherVal'], ['sharpen', 'sharpenVal'],
- ['holeSize', 'holeSizeVal', '%'],
+ ['holeSize', 'holeSizeVal', '%'], ['defringe', 'defringeVal'],
  ['colours', 'coloursVal'], ['detail', 'detailVal'], ['smooth', 'smoothVal']].forEach(
   ([id, out, unit]) => {
     $(id).addEventListener('input', () => {
