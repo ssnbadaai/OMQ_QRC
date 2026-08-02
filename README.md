@@ -69,6 +69,18 @@ Photos are uploaded to `assets/` and referenced by absolute URL. A `data:` URI
 previews perfectly here and then fails in the recipient's inbox — which is the
 worst possible moment to discover it — so the tool refuses to inline one.
 
+Fonts uploaded to the Brand Kit can be used on a card, with a caveat worth
+stating plainly: **Gmail and Outlook on Windows discard `@font-face` entirely.**
+No email tool can change that. A brand font is therefore an enhancement for the
+clients that honour it — Apple Mail, iOS Mail, Thunderbird, Samsung Mail — and
+the *Falls back to* picker decides what everyone else sees, so the stack always
+ends in a font the recipient certainly has.
+
+The `@font-face` rule is emitted only into the full document, not the pasted
+fragment: a fragment has no `<head>` to carry it. So a custom font reaches
+recipients through **Copy HTML** or the `.html` download into a mail template,
+not through *Copy for email*.
+
 Adding a card type is one entry in `TEMPLATES`: a label and a list of fields.
 Everything else is shared.
 

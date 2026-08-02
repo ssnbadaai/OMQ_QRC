@@ -24,6 +24,40 @@ const FAMILIES = {
   sans: "Arial, Helvetica, 'Noto Sans Arabic', sans-serif",
 };
 
+/* Gmail and Outlook on Windows discard @font-face outright, so a brand
+   font is an enhancement for the clients that do honour it — Apple
+   Mail, iOS Mail, Thunderbird, Samsung Mail. Everyone else has to land
+   somewhere deliberate, which is what the fallback picker is for: the
+   stack always ends in a font the recipient certainly has. */
+const FONT_SUPPORT =
+  'Shown in Apple Mail, iOS Mail, Thunderbird and Samsung Mail. ' +
+  'Gmail and Outlook ignore uploaded fonts and use the fallback — ' +
+  'no email tool can change that.';
+
+function fontOf(id) {
+  const brand = brandFonts.find((f) => 'brand-' + f.id === id);
+  if (!brand) return FAMILIES[id] || FAMILIES.serif;
+  /* The custom face first, the chosen fallback immediately behind it. */
+  const fallback = FAMILIES[$('fontFallback').value] || FAMILIES.serif;
+  return `'${brand.family}', ${fallback}`;
+}
+
+const FORMATS = { woff2: 'woff2', woff: 'woff', ttf: 'truetype', otf: 'opentype' };
+
+/* Only emitted into the full document: a pasted fragment has no head
+   to carry it, and the clients that would honour it read it there. */
+function fontFaceRule() {
+  const brand = brandFonts.find((f) => 'brand-' + f.id === $('fontFamily').value);
+  if (!brand) return '';
+  const ext = (brand.original.split('.').pop() || 'woff2').toLowerCase();
+  return `
+    @font-face {
+      font-family: '${brand.family}';
+      src: url('${absolute(brand.url)}') format('${FORMATS[ext] || 'woff2'}');
+      font-display: swap;
+    }`;
+}
+
 /* ============================================================
    Templates
    ============================================================ */
@@ -88,6 +122,7 @@ let template = 'welcome';
 let lang = 'en';
 let values = {};
 let photoUrl = '';
+let brandFonts = [];
 
 const isRTL = () => lang === 'ar';
 
@@ -121,7 +156,7 @@ function linkFor(value) {
 function cardHtml(s, forClipboard) {
   const dir = isRTL() ? 'rtl' : 'ltr';
   const side = isRTL() ? 'right' : 'left';
-  const family = FAMILIES[s.family];
+  const family = s.family;
   const h1 = s.headingSize;
   const bodySize = Math.max(15, Math.round(h1 * 0.47));
   const radius = s.round ? 14 : 0;
@@ -236,7 +271,7 @@ function fullDocument(s) {
 <style>
     body { margin:0; padding:0; width:100% !important; background:${s.page}; }
     img { -ms-interpolation-mode:bicubic; }
-    a { text-decoration:none; }${MEDIA}
+    a { text-decoration:none; }${fontFaceRule()}${MEDIA}
 </style>
 </head>
 <body style="margin:0;padding:0;background:${s.page};">
@@ -266,7 +301,7 @@ function state() {
     accent: $('accentColor').value,
     ink: light ? '#14171f' : '#f4f6ff',
     muted: light ? '#6a7080' : '#aab',
-    family: $('fontFamily').value,
+    family: fontOf($('fontFamily').value),
     headingSize: Number($('headingSize').value),
   };
 }
@@ -346,10 +381,40 @@ $('langSelect').addEventListener('change', () => {
   refresh();
 });
 
-['accentColor', 'darkColor', 'paperColor', 'pageColor', 'fontFamily',
+['accentColor', 'darkColor', 'paperColor', 'pageColor', 'fontFamily', 'fontFallback',
  'showLogo', 'showRule', 'roundCard', 'badgeUrl'].forEach((id) =>
   $(id).addEventListener('input', refresh)
 );
+
+function buildFontSelect() {
+  const sel = $('fontFamily');
+  const chosen = sel.value;
+  sel.innerHTML = '';
+
+  const add = (value, text) => {
+    const o = document.createElement('option');
+    o.value = value;
+    o.textContent = text;
+    sel.appendChild(o);
+  };
+  add('serif', 'Serif — Georgia');
+  add('sans', 'Sans — Arial / Helvetica');
+  brandFonts.forEach((f) => add('brand-' + f.id, f.name + ' — uploaded'));
+
+  sel.value = chosen || 'serif';
+  showFontNote();
+}
+
+function showFontNote() {
+  const custom = $('fontFamily').value.startsWith('brand-');
+  $('fontNote').textContent = custom
+    ? FONT_SUPPORT
+    : brandFonts.length
+      ? 'Upload fonts under Brand Kit → Fonts to use them here.'
+      : 'Sign in and add fonts to the Brand Kit to use your own.';
+}
+
+$('fontFamily').addEventListener('change', showFontNote);
 
 $('headingSize').addEventListener('input', () => {
   $('headingSizeVal').textContent = $('headingSize').value + ' px';
@@ -464,6 +529,24 @@ API.optionalSession({
   onIn: async () => {
     try {
       const { assets } = await API.assets.list();
+
+      brandFonts = (assets || [])
+        .filter((a) => a.kind === 'font')
+        .map((f) => ({ ...f, family: 'OMQ Card ' + f.id }));
+
+      /* Load them here too, so the preview shows what a client that
+         honours the face would show. */
+      brandFonts.forEach((f) => {
+        new FontFace(f.family, `url(${JSON.stringify(absolute(f.url))})`)
+          .load()
+          .then((face) => {
+            document.fonts.add(face);
+            refresh();
+          })
+          .catch(() => {});
+      });
+      buildFontSelect();
+
       const colours = (assets || []).filter((a) => a.kind === 'colour');
       if (!colours.length) return;
 
@@ -489,4 +572,5 @@ API.optionalSession({
 /* ---------- init ---------- */
 seed();
 buildFields();
+showFontNote();
 refresh();

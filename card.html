@@ -8,7 +8,7 @@
   <title>OMQ Email Cards</title>
   <link rel="icon" href="IMG/omq-logo.png" />
   <link rel="apple-touch-icon" href="IMG/omq-logo.png" />
-  <link rel="stylesheet" href="styles.css?v=9" />
+  <link rel="stylesheet" href="styles.css?v=10" />
 </head>
 <body>
 
@@ -103,17 +103,27 @@
 
       <h3>Type</h3>
       <div class="field-row">
-        <label>Family
+        <label>Font
           <select id="fontFamily">
             <option value="serif" selected>Serif — Georgia</option>
             <option value="sans">Sans — Arial / Helvetica</option>
           </select>
         </label>
+        <label>Falls back to
+          <select id="fontFallback">
+            <option value="serif" selected>Serif — Georgia</option>
+            <option value="sans">Sans — Arial / Helvetica</option>
+          </select>
+        </label>
+      </div>
+      <div class="field-row">
         <label>Heading size
           <input type="range" id="headingSize" min="22" max="46" step="1" value="34" />
           <span class="range-val" id="headingSizeVal">34 px</span>
         </label>
       </div>
+
+      <p class="muted-copy" id="fontNote"></p>
 
       <h3>Elements</h3>
       <label class="checkbox-label">
@@ -137,7 +147,7 @@
     OMQ Email Cards · <a href="dev.html">Dev Tools</a> · <a href="index.html">Home</a>
   </footer>
 
-  <script src="api.js?v=9"></script>
-  <script src="card.js?v=9"></script>
+  <script src="api.js?v=10"></script>
+  <script src="card.js?v=10"></script>
 </body>
 </html>
