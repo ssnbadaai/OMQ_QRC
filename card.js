@@ -151,6 +151,133 @@ function linkFor(value) {
 }
 
 /* ============================================================
+   Artwork
+
+   Two things cannot go into an email as they are: the logo is an SVG,
+   which Gmail and Outlook refuse to render, and the wave is drawn
+   rather than stored. Both become PNGs at a public address — a data:
+   URI previews fine here and then fails in the inbox.
+
+   Rasterised once and remembered, so this is not paid on every edit.
+   ============================================================ */
+const LOGO_SVG = 'IMG/OMQNewLogo512.svg';
+const RASTER_KEY = 'omq-card-rasters';
+
+let art = { logo: '', wave: '', hosted: false };
+
+function rasters() {
+  try {
+    return JSON.parse(localStorage.getItem(RASTER_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
+
+function rememberRaster(key, url) {
+  const all = rasters();
+  all[key] = url;
+  localStorage.setItem(RASTER_KEY, JSON.stringify(all));
+}
+
+/* Returns a hosted URL, or a data: URI when signed out so the preview
+   still shows the design. The caller reports which it got. */
+async function hostRaster(key, canvas) {
+  const cached = rasters()[key];
+  if (cached) return { url: cached, hosted: true };
+
+  if (!API.isSignedIn()) return { url: canvas.toDataURL('image/png'), hosted: false };
+
+  try {
+    const blob = await new Promise((r) => canvas.toBlob(r, 'image/png'));
+    const form = new FormData();
+    form.append('kind', 'photo');
+    form.append('name', key);
+    form.append('file', new File([blob], key + '.png', { type: 'image/png' }));
+
+    const { asset } = await API.assets.upload(form);
+    const url = absolute(asset.url);
+    rememberRaster(key, url);
+    return { url, hosted: true };
+  } catch {
+    return { url: canvas.toDataURL('image/png'), hosted: false };
+  }
+}
+
+function svgToCanvas(src, height) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const ratio = (img.naturalWidth || 1) / (img.naturalHeight || 1);
+      const canvas = document.createElement('canvas');
+      canvas.height = height;
+      canvas.width = Math.max(1, Math.round(height * ratio));
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas);
+    };
+    img.onerror = () => reject(new Error('Could not read ' + src));
+    img.src = src;
+  });
+}
+
+/* The wave: stacked chevron runs, matching the brand mark. */
+function waveCanvas(colour, w = 300, rows = 3) {
+  const step = w / 6;
+  const amp = step * 0.5;
+  const stroke = step * 0.3;
+  const rowGap = amp + stroke * 1.15;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = Math.ceil(rowGap * (rows - 1) + amp + stroke * 2);
+
+  const ctx = canvas.getContext('2d');
+  ctx.strokeStyle = colour;
+  ctx.lineWidth = stroke;
+  ctx.lineCap = 'butt';
+  ctx.lineJoin = 'miter';
+
+  for (let r = 0; r < rows; r++) {
+    const top = stroke + r * rowGap;
+    ctx.beginPath();
+    for (let i = 0; i <= 6; i++) {
+      const px = i * step;
+      const py = top + (i % 2 ? amp : 0);
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
+  return canvas;
+}
+
+async function ensureArt() {
+  const accent = $('accentColor').value.toUpperCase();
+  let hosted = true;
+
+  try {
+    const logo = await hostRaster('omq-logo-v2', await svgToCanvas(LOGO_SVG, 180));
+    art.logo = logo.url;
+    hosted = hosted && logo.hosted;
+  } catch {
+    /* Fall back to the PNG that has always been there. */
+    art.logo = absolute('IMG/omq-logo.png');
+  }
+
+  /* Keyed by colour, so a new accent produces a new wave rather than
+     quietly reusing the old one. */
+  const wave = await hostRaster('omq-wave-' + accent.replace('#', ''), waveCanvas(accent));
+  art.wave = wave.url;
+  hosted = hosted && wave.hosted;
+
+  art.hosted = hosted;
+  say(
+    $('artStatus'),
+    hosted ? '' : 'Logo and wave are preview-only until you sign in — mail clients cannot show them inline.',
+    hosted ? null : 'warn'
+  );
+  refresh();
+}
+
+/* ============================================================
    The email
    ============================================================ */
 function cardHtml(s, forClipboard) {
@@ -192,17 +319,28 @@ function cardHtml(s, forClipboard) {
     ? `<a href="${esc(href)}" style="color:${s.accent};text-decoration:none;">${esc(s.contact)}</a>`
     : esc(s.contact);
 
-  /* A one-row table, so the pieces sit apart without flexbox. */
+  /* A one-row table, so the pieces sit apart without flexbox. The
+     leading and trailing cells swap in Arabic, so each stays on the
+     side the text reads away from. */
+  const badgeCell = s.badge
+    ? `<img src="${esc(s.badge)}" height="52" alt="" style="display:block;border:0;height:52px;width:auto;" />`
+    : '&nbsp;';
+  const waveCell = s.wave && s.waveUrl
+    ? `<img src="${esc(s.waveUrl)}" width="118" alt="" style="display:block;border:0;width:118px;height:auto;" />`
+    : '&nbsp;';
+  const logoCell = s.logo && s.logoUrl
+    ? `<img src="${esc(s.logoUrl)}" height="54" alt="OMQ" style="display:block;border:0;height:54px;width:auto;" />`
+    : '&nbsp;';
+
+  const lead = isRTL() ? waveCell : badgeCell;
+  const trail = isRTL() ? badgeCell : waveCell;
+
   const footer = `
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tr>
-                  <td align="${side}" style="font:13px ${family};color:${s.muted};" width="33%">
-                    ${s.badge ? `<img src="${esc(s.badge)}" height="46" alt="" style="display:block;border:0;height:46px;width:auto;" />` : '&nbsp;'}
-                  </td>
-                  <td align="center" width="34%">
-                    ${s.logo ? `<img src="${esc(s.logoUrl)}" height="46" alt="OMQ" style="display:block;border:0;height:46px;width:auto;" />` : '&nbsp;'}
-                  </td>
-                  <td width="33%">&nbsp;</td>
+                  <td align="left" width="33%">${lead}</td>
+                  <td align="center" width="34%">${logoCell}</td>
+                  <td align="right" width="33%">${trail}</td>
                 </tr>
               </table>`;
 
@@ -292,7 +430,9 @@ function state() {
     photo: absolute(photoUrl),
     badge: absolute($('badgeUrl').value.trim()),
     logo: $('showLogo').checked,
-    logoUrl: absolute('IMG/omq-logo.png'),
+    logoUrl: art.logo,
+    wave: $('showWave').checked,
+    waveUrl: art.wave,
     rule: $('showRule').checked,
     round: $('roundCard').checked,
     paper,
@@ -381,10 +521,16 @@ $('langSelect').addEventListener('change', () => {
   refresh();
 });
 
-['accentColor', 'darkColor', 'paperColor', 'pageColor', 'fontFamily', 'fontFallback',
- 'showLogo', 'showRule', 'roundCard', 'badgeUrl'].forEach((id) =>
+['darkColor', 'paperColor', 'pageColor', 'fontFamily', 'fontFallback',
+ 'showLogo', 'showWave', 'showRule', 'roundCard', 'badgeUrl'].forEach((id) =>
   $(id).addEventListener('input', refresh)
 );
+
+/* The wave is baked at its colour, so a new accent needs a new one.
+   On `change`, not `input` — dragging a colour picker would otherwise
+   rasterise and upload on every intermediate shade. */
+$('accentColor').addEventListener('input', refresh);
+$('accentColor').addEventListener('change', ensureArt);
 
 function buildFontSelect() {
   const sel = $('fontFamily');
@@ -574,3 +720,4 @@ seed();
 buildFields();
 showFontNote();
 refresh();
+ensureArt();

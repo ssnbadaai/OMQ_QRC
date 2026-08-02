@@ -8,7 +8,7 @@
   <title>OMQ Email Cards</title>
   <link rel="icon" href="IMG/omq-logo.png" />
   <link rel="apple-touch-icon" href="IMG/omq-logo.png" />
-  <link rel="stylesheet" href="styles.css?v=10" />
+  <link rel="stylesheet" href="styles.css?v=11" />
 </head>
 <body>
 
@@ -127,19 +127,24 @@
 
       <h3>Elements</h3>
       <label class="checkbox-label">
-        <input type="checkbox" id="showLogo" checked /> OMQ logo in the footer
+        <input type="checkbox" id="showLogo" checked /> OMQ logo, centre
       </label>
       <label class="checkbox-label">
-        <input type="checkbox" id="showRule" checked /> Accent rule
+        <input type="checkbox" id="showWave" checked /> Wave, trailing corner
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" id="showRule" /> Accent rule above the footer
       </label>
       <label class="checkbox-label">
         <input type="checkbox" id="roundCard" checked /> Rounded corners
       </label>
 
-      <label>Footer artwork <span class="opt">optional, needs a public address</span>
-        <input type="url" id="badgeUrl" placeholder="https://…/badge.png"
+      <label>Side artwork <span class="opt">leading corner</span>
+        <input type="url" id="badgeUrl" value="IMG/Asma_meme512.png"
                autocapitalize="off" autocorrect="off" spellcheck="false" />
       </label>
+
+      <p class="status" id="artStatus"></p>
     </section>
   </main>
 
@@ -147,7 +152,7 @@
     OMQ Email Cards · <a href="dev.html">Dev Tools</a> · <a href="index.html">Home</a>
   </footer>
 
-  <script src="api.js?v=10"></script>
-  <script src="card.js?v=10"></script>
+  <script src="api.js?v=11"></script>
+  <script src="card.js?v=11"></script>
 </body>
 </html>

@@ -65,6 +65,16 @@ own inside an `[if mso]` conditional, since it ignores `max-width`.
 Outlook produces a card rather than a wall of angle brackets. **Copy HTML** and
 the `.html` download are for pasting into a mail template or an ESP.
 
+The footer carries the OMQ mark in the centre, side artwork on the leading
+corner and the wave on the trailing one — the two swapping in Arabic so each
+stays on the side the text reads away from.
+
+The mark is an SVG and the wave is drawn rather than stored, and **mail clients
+render neither**: Gmail and Outlook refuse SVG outright, and no client fetches a
+`data:` URI. Both are therefore rasterised to PNG, uploaded once and remembered
+in `localStorage`, so it is not paid on every edit. The wave is keyed by colour,
+so changing the accent produces a new one rather than reusing the old.
+
 Photos are uploaded to `assets/` and referenced by absolute URL. A `data:` URI
 previews perfectly here and then fails in the recipient's inbox — which is the
 worst possible moment to discover it — so the tool refuses to inline one.
