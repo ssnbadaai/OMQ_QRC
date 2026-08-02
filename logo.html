@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1220" />
+  <meta name="robots" content="noindex" />
+  <title>OMQ Logo Lab</title>
+  <link rel="icon" href="IMG/omq-logo.png" />
+  <link rel="apple-touch-icon" href="IMG/omq-logo.png" />
+  <link rel="stylesheet" href="styles.css?v=14" />
+</head>
+<body>
+
+  <header class="topbar">
+    <a class="brand" href="dev.html">
+      <img src="IMG/omq-logo.png" alt="OMQ" class="brand-logo" />
+      <span class="brand-name">OMQ <b>Logo Lab</b></span>
+    </a>
+    <div class="topbar-right">
+      <span class="account" id="authAccount"></span>
+      <a class="topbar-link" href="dev.html">Dev Tools →</a>
+    </div>
+  </header>
+
+  <main class="card-layout">
+
+    <!-- ============ PREVIEW ============ -->
+    <section class="panel card-preview-panel">
+      <div class="admin-header">
+        <h2>Result</h2>
+        <span class="link-meta" id="sizeLabel"></span>
+      </div>
+
+      <div class="card-stage">
+        <div class="logo-stage" id="logoStage">
+          <img id="resultImg" alt="" />
+        </div>
+      </div>
+
+      <div class="export-row">
+        <label>File name
+          <input type="text" id="fileName" placeholder="logo" />
+        </label>
+      </div>
+
+      <div class="actions">
+        <button id="downloadPng">Download PNG</button>
+        <button id="downloadSvg" class="secondary hidden">SVG</button>
+      </div>
+      <div class="actions">
+        <button id="saveKitBtn" class="secondary hidden">Save to Brand Kit</button>
+      </div>
+      <p class="status" id="exportStatus">Choose a logo to begin.</p>
+    </section>
+
+    <!-- ============ SOURCE ============ -->
+    <section class="panel">
+      <h2>Source</h2>
+
+      <label class="file-label" id="dropZone">
+        <input type="file" id="sourceFile" accept="image/*" />
+        <span id="sourceText">Choose a logo — or drop one here</span>
+      </label>
+      <p class="status" id="sourceStatus"></p>
+
+      <h3><span class="step">1</span> Background</h3>
+      <label class="checkbox-label">
+        <input type="checkbox" id="removeBg" checked /> Make the background transparent
+      </label>
+      <div class="field-row">
+        <label>Tolerance
+          <input type="range" id="tolerance" min="2" max="120" step="1" value="34" />
+          <span class="range-val" id="toleranceVal">34</span>
+        </label>
+        <label>Edge softness
+          <input type="range" id="feather" min="0" max="100" step="5" value="45" />
+          <span class="range-val" id="featherVal">45</span>
+        </label>
+      </div>
+      <label class="checkbox-label">
+        <input type="checkbox" id="trim" checked /> Trim empty space around it
+      </label>
+      <p class="muted-copy">
+        Works by spreading inwards from the edges, so an enclosed colour — the
+        middle of an <b>O</b>, a white shape inside the mark — is kept.
+      </p>
+
+      <h3><span class="step">2</span> Size</h3>
+      <div class="field-row">
+        <label>Scale
+          <select id="scale">
+            <option value="1">Leave as it is</option>
+            <option value="2" selected>2×</option>
+            <option value="3">3×</option>
+            <option value="4">4×</option>
+            <option value="6">6×</option>
+          </select>
+        </label>
+        <label>Sharpen
+          <input type="range" id="sharpen" min="0" max="100" step="5" value="25" />
+          <span class="range-val" id="sharpenVal">25</span>
+        </label>
+      </div>
+      <p class="muted-copy">
+        Lanczos resampling — noticeably cleaner than a plain stretch, but it
+        cannot invent detail that was never there. For a logo, tracing it to
+        vector below beats any upscale.
+      </p>
+    </section>
+
+    <!-- ============ VECTOR ============ -->
+    <section class="panel">
+      <h2><span class="step">3</span> Vector</h2>
+
+      <label class="checkbox-label">
+        <input type="checkbox" id="vectorize" /> Trace to SVG
+      </label>
+
+      <div id="vectorControls">
+        <div class="field-row">
+          <label>Colours
+            <input type="range" id="colours" min="1" max="8" step="1" value="2" />
+            <span class="range-val" id="coloursVal">2</span>
+          </label>
+          <label>Detail
+            <input type="range" id="detail" min="0" max="100" step="5" value="45" />
+            <span class="range-val" id="detailVal">45</span>
+          </label>
+        </div>
+        <div class="field-row">
+          <label>Smoothing
+            <input type="range" id="smooth" min="0" max="100" step="5" value="60" />
+            <span class="range-val" id="smoothVal">60</span>
+          </label>
+        </div>
+        <p class="muted-copy">
+          Built for flat marks: solid colours, clean edges. A photograph traces
+          into thousands of shapes and is better left as a raster.
+        </p>
+        <p class="status" id="vectorStatus"></p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    OMQ Logo Lab · <a href="dev.html">Dev Tools</a> · <a href="index.html">Home</a>
+  </footer>
+
+  <script src="api.js?v=14"></script>
+  <script src="logo.js?v=14"></script>
+</body>
+</html>

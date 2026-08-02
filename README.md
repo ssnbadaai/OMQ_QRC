@@ -41,8 +41,36 @@ execute anything script-like, and serves SVG under a CSP that denies it script
 and network — an SVG is a document format, and one uploaded to our own origin
 would otherwise be same-origin XSS.
 
+**Logo Lab** ([`logo.html`](logo.html)) — knock out a background, enlarge, trace
+to vector. Three jobs in one pipeline because they are the same job, and
+because they feed each other: clearing the background is what makes the trace
+clean, and tracing is what actually makes a logo resolution-independent, where
+an upscale only ever guesses.
+
+Background removal spreads inwards from the border rather than deleting every
+pixel of a given colour — connectivity is the whole trick, since a global
+delete punches holes through the middle of an **O**. Alpha ramps down past the
+tolerance instead of stopping dead, so antialiased edges do not become a
+staircase.
+
+Enlargement is Lanczos-3, on premultiplied alpha: resampling colour and alpha
+separately drags the colour of transparent pixels into the visible edge and
+shows up as a halo. It is honest resampling, not invention.
+
+Tracing posterises to a few flat colours, then walks each region's outline as
+pixel edges — every edge whose neighbour is empty, emitted in a consistent
+direction — which chains into closed loops. A hole comes out wound the opposite
+way, so `fill-rule="evenodd"` renders it as a hole with no special handling.
+Built for flat marks; a photograph traces into thousands of shapes and should
+stay a raster.
+
 **Image Tools** ([`image.html`](image.html)) — colour palette extraction and
-font comparison. Both begin by getting pixels out of an image or a video frame,
+font comparison. Palettes come from an image, a video frame, **or a PDF brand
+guideline**: a guideline states its palette twice, once as the fill colours it
+paints with and once as text — `#24A8AC`, `C0 M0 Y0 K100` — and both are read,
+because either alone misses cases. Written values are weighted far above
+painted ones, and page white is discarded. The content streams are Flate, which
+the browser undoes itself, so no PDF library is involved. Both begin by getting pixels out of an image or a video frame,
 so they share the loader, the canvas, and whichever frame you have scrubbed to.
 
 Palettes come from a median-cut quantiser, which keeps distinct-but-uncommon

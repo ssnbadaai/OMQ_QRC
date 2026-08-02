@@ -8,7 +8,7 @@
   <title>OMQ Image Tools</title>
   <link rel="icon" href="IMG/omq-logo.png" />
   <link rel="apple-touch-icon" href="IMG/omq-logo.png" />
-  <link rel="stylesheet" href="styles.css?v=13" />
+  <link rel="stylesheet" href="styles.css?v=14" />
 </head>
 <body>
 
@@ -30,8 +30,8 @@
       <h2>Image or video</h2>
 
       <label class="file-label" id="dropZone">
-        <input type="file" id="sourceFile" accept="image/*,video/*" />
-        <span id="sourceText">Choose an image or video — or drop one here</span>
+        <input type="file" id="sourceFile" accept="image/*,video/*,application/pdf,.pdf" />
+        <span id="sourceText">Choose an image, video or PDF — or drop one here</span>
       </label>
 
       <div class="hidden" id="stage">
@@ -113,7 +113,8 @@
     <!-- Signed-out prompt. Palette extraction never needs an account. -->
     <section class="panel" id="signInPanel">
       <p class="muted-copy">
-        Palette extraction works without signing in.
+        Palette extraction — from a picture, a video frame or a brand PDF —
+        works without signing in.
         <a href="login.html" id="signInLink">Sign in</a> to compare against the
         Brand Kit fonts and to save colours into it.
       </p>
@@ -124,7 +125,7 @@
     OMQ Image Tools · <a href="dev.html">Dev Tools</a> · <a href="index.html">Home</a>
   </footer>
 
-  <script src="api.js?v=13"></script>
-  <script src="image.js?v=13"></script>
+  <script src="api.js?v=14"></script>
+  <script src="image.js?v=14"></script>
 </body>
 </html>

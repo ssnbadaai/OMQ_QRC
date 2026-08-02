@@ -34,11 +34,156 @@ async function copy(text, statusEl) {
   }
 }
 
+
+/* ============================================================
+   Colours out of a PDF brand guideline
+
+   A guideline states its palette twice: once as the fill colours it
+   actually paints with, and once as text — "#24A8AC", "C0 M0 Y0 K100".
+   Both are read here, because either alone misses cases. The written
+   values are the more trustworthy of the two, so they are kept first.
+
+   The content streams are almost always Flate-compressed, which the
+   browser can undo on its own — no PDF library involved.
+   ============================================================ */
+async function inflate(bytes) {
+  for (const format of ['deflate', 'deflate-raw']) {
+    try {
+      const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream(format));
+      return new Uint8Array(await new Response(stream).arrayBuffer());
+    } catch {
+      /* Wrong wrapper, or not compressed at all — try the next. */
+    }
+  }
+  return bytes;
+}
+
+function pdfStreams(bytes) {
+  /* Latin-1 keeps byte values intact, so offsets found in the text map
+     straight back onto the array. */
+  const text = new TextDecoder('latin1').decode(bytes);
+  const out = [];
+  let at = 0;
+
+  while (true) {
+    const start = text.indexOf('stream', at);
+    if (start < 0) break;
+    const end = text.indexOf('endstream', start);
+    if (end < 0) break;
+
+    let from = start + 6;
+    if (text[from] === '\r') from++;
+    if (text[from] === '\n') from++;
+
+    out.push(bytes.subarray(from, end));
+    at = end + 9;
+  }
+  return out;
+}
+
+const clamp255 = (v) => Math.max(0, Math.min(255, Math.round(v)));
+const cmykToRgb = (c, m, y, k) => [
+  clamp255(255 * (1 - c) * (1 - k)),
+  clamp255(255 * (1 - m) * (1 - k)),
+  clamp255(255 * (1 - y) * (1 - k)),
+];
+
+function coloursFromContent(content, counts) {
+  const bump = (rgb, weight) => {
+    /* Near-white and near-black are page and body text, not brand. */
+    const [r, g, b] = rgb;
+    if (r > 246 && g > 246 && b > 246) return;
+    const key = hex(r, g, b);
+    counts.set(key, (counts.get(key) || 0) + weight);
+  };
+
+  const num = '(-?[\\d.]+)';
+  const sp = '\\s+';
+
+  /* Written down in the document — the authoritative statement. */
+  for (const m of content.matchAll(/#([0-9A-Fa-f]{6})\b/g)) {
+    const n = parseInt(m[1], 16);
+    bump([(n >> 16) & 255, (n >> 8) & 255, n & 255], 40);
+  }
+  for (const m of content.matchAll(
+    /C\s*:?\s*(\d{1,3})\D{1,4}M\s*:?\s*(\d{1,3})\D{1,4}Y\s*:?\s*(\d{1,3})\D{1,4}K\s*:?\s*(\d{1,3})/gi
+  )) {
+    bump(cmykToRgb(+m[1] / 100, +m[2] / 100, +m[3] / 100, +m[4] / 100), 40);
+  }
+
+  /* Painted with — weaker evidence, but catches swatches that carry no
+     printed value. */
+  for (const m of content.matchAll(new RegExp(num + sp + num + sp + num + sp + 'rg\\b', 'gi'))) {
+    bump([+m[1] * 255, +m[2] * 255, +m[3] * 255], 1);
+  }
+  for (const m of content.matchAll(
+    new RegExp(num + sp + num + sp + num + sp + num + sp + 'k\\b', 'gi')
+  )) {
+    bump(cmykToRgb(+m[1], +m[2], +m[3], +m[4]), 1);
+  }
+}
+
+async function coloursFromPdf(file) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const counts = new Map();
+
+  /* Values are often written in an uncompressed part of the file. */
+  coloursFromContent(new TextDecoder('latin1').decode(bytes), counts);
+
+  const streams = pdfStreams(bytes);
+  for (const raw of streams.slice(0, 400)) {
+    const text = new TextDecoder('latin1').decode(await inflate(raw));
+    /* Skip anything that decoded to binary — images, fonts. */
+    if (!/[a-zA-Z]/.test(text.slice(0, 200))) continue;
+    coloursFromContent(text, counts);
+  }
+
+  const total = [...counts.values()].reduce((a, b) => a + b, 0) || 1;
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 12)
+    .map(([code, weight]) => {
+      const n = parseInt(code.slice(1), 16);
+      return { rgb: [(n >> 16) & 255, (n >> 8) & 255, n & 255], share: weight / total };
+    });
+}
+
+async function loadPdf(file) {
+  say($('sourceStatus'), 'Reading the PDF…');
+  $('stage').classList.add('hidden');
+  $('fontPanel').classList.add('hidden');
+
+  try {
+    palette = await coloursFromPdf(file);
+    if (!palette.length) {
+      say($('sourceStatus'),
+        'No colours found. The file may be encrypted, or built entirely from images.', 'warn');
+      return;
+    }
+    $('palettePanel').classList.remove('hidden');
+    /* Nothing to re-read a frame from, and no count to vary. */
+    $('recomputeBtn').classList.add('hidden');
+    $('swatchCount').closest('label').classList.add('hidden');
+    renderSwatches();
+    say($('sourceStatus'), `${palette.length} colours found in ${file.name}.`, 'ok');
+  } catch (err) {
+    say($('sourceStatus'), '⚠ Could not read that PDF: ' + err.message, 'warn');
+  }
+}
+
 /* ============================================================
    Loading a source
    ============================================================ */
 function loadFile(file) {
   if (!file) return;
+
+  /* A PDF has no frame to read, so it takes its own path to the same
+     palette panel. */
+  if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
+    $('sourceText').textContent = '✓ ' + file.name;
+    loadPdf(file);
+    return;
+  }
 
   const url = URL.createObjectURL(file);
   const isVideo = file.type.startsWith('video/');
@@ -80,6 +225,9 @@ function loadFile(file) {
 function revealTools() {
   $('palettePanel').classList.remove('hidden');
   $('fontPanel').classList.remove('hidden');
+  /* Undo whatever a PDF hid, in case one was loaded first. */
+  $('recomputeBtn').classList.remove('hidden');
+  $('swatchCount').closest('label').classList.remove('hidden');
 }
 
 $('sourceFile').addEventListener('change', (e) => loadFile(e.target.files[0]));
