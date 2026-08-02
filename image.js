@@ -11,6 +11,8 @@ const API = window.OMQ_API;
 
 let source = null; // { el, kind: 'image' | 'video' }
 let palette = [];
+let nodes = [];      // the DOM for each entry, so a drag can repaint in place
+let sampleData = null; // read at a higher resolution than the palette pass
 let brandFonts = [];
 
 /* ---------- helpers ---------- */
@@ -344,6 +346,10 @@ function extract() {
   const data = readPixels();
   if (!data) return;
 
+  /* Quantising is happy with a small read; picking a colour by hand is
+     not, so keep a finer one to sample from. */
+  sampleData = readPixels(1024);
+
   const pixels = [];
   const d = data.data;
   /* Every 4th pixel is plenty at this scale, and four times faster.
@@ -370,11 +376,67 @@ function extract() {
   say($('paletteStatus'), '');
 }
 
+/* Averaged over three by three, the way an eyedropper does: a single
+   pixel on a photograph is as likely to be sensor noise as colour. */
+function sampleAt(u, v) {
+  if (!sampleData) return null;
+  const { width: w, height: h, data } = sampleData;
+  const cx = Math.round(u * (w - 1));
+  const cy = Math.round(v * (h - 1));
+
+  let r = 0, g = 0, b = 0, n = 0;
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      const x = cx + dx;
+      const y = cy + dy;
+      if (x < 0 || y < 0 || x >= w || y >= h) continue;
+      const i = (y * w + x) * 4;
+      if (data[i + 3] < 125) continue;
+      r += data[i];
+      g += data[i + 1];
+      b += data[i + 2];
+      n++;
+    }
+  }
+  return n ? [r / n, g / n, b / n] : null;
+}
+
+/* Repaints one entry without rebuilding anything — a drag updates many
+   times a second, and re-rendering the list would tear the pointer
+   capture away mid-gesture. */
+function paint(i) {
+  const e = palette[i];
+  const n = nodes[i];
+  if (!n) return;
+
+  const code = hex(...e.rgb);
+  const light = isLight(e.rgb);
+
+  n.sw.style.background = code;
+  n.sw.title = 'Copy ' + code;
+  n.sw.classList.toggle('on-light', light);
+  n.label.textContent = code;
+  /* The share was this colour's portion of the picture. Once the pin
+     has been moved by hand it is no longer that, so it stops claiming
+     to be. */
+  n.share.textContent = e.picked ? 'picked' : Math.round(e.share * 100) + '%';
+
+  if (!n.pin) return;
+  n.pin.style.left = e.at[0] * 100 + '%';
+  n.pin.style.top = e.at[1] * 100 + '%';
+  n.pin.title = 'Drag to sample elsewhere · click to copy';
+  n.pin.classList.toggle('on-light', light);
+  n.pin.classList.toggle('flip', e.at[0] > 0.72);
+  n.dot.style.background = code;
+  n.tag.textContent = code;
+}
+
 function renderSwatches() {
   const wrap = $('swatches');
   const pins = $('markers');
   wrap.innerHTML = '';
   pins.innerHTML = '';
+  nodes = [];
 
   palette.forEach((entry, i) => {
     const code = hex(...entry.rgb);
@@ -395,31 +457,72 @@ function renderSwatches() {
     share.textContent = Math.round(entry.share * 100) + '%';
 
     sw.append(label, share);
-    sw.addEventListener('click', () => copy(code, $('paletteStatus')));
+    sw.addEventListener('click', () => copy(hex(...palette[i].rgb), $('paletteStatus')));
     wrap.appendChild(sw);
+
+    nodes[i] = { sw, label, share };
 
     /* A PDF has no picture to point at. */
     if (!entry.at) return;
 
     const pin = document.createElement('button');
-    pin.className = 'marker plain' + (light ? ' on-light' : '');
-    pin.style.left = entry.at[0] * 100 + '%';
-    pin.style.top = entry.at[1] * 100 + '%';
-    pin.title = 'Copy ' + code;
+    pin.className = 'marker plain';
 
     const dot = document.createElement('span');
     dot.className = 'marker-dot';
-    dot.style.background = code;
 
     const tag = document.createElement('span');
     tag.className = 'marker-hex';
-    tag.textContent = code;
-
-    /* Labels on the right half would run off the edge. */
-    if (entry.at[0] > 0.72) pin.classList.add('flip');
 
     pin.append(dot, tag);
-    pin.addEventListener('click', () => copy(code, $('paletteStatus')));
+    pins.appendChild(pin);
+    Object.assign(nodes[i], { pin, dot, tag });
+
+    /* ---- drag to re-sample ----
+       Pointer capture keeps the gesture with this marker even when the
+       pointer outruns it, which it will: the dot is 20px and a hand is
+       not that precise. */
+    let moved = false;
+
+    pin.addEventListener('pointerdown', (ev) => {
+      ev.preventDefault();
+      pin.setPointerCapture(ev.pointerId);
+      pin.classList.add('is-dragging');
+      moved = false;
+    });
+
+    pin.addEventListener('pointermove', (ev) => {
+      if (!pin.hasPointerCapture(ev.pointerId)) return;
+
+      const rect = $('stageMedia').getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+
+      const u = Math.max(0, Math.min(1, (ev.clientX - rect.left) / rect.width));
+      const v = Math.max(0, Math.min(1, (ev.clientY - rect.top) / rect.height));
+
+      const e = palette[i];
+      if (Math.abs(u - e.at[0]) > 0.003 || Math.abs(v - e.at[1]) > 0.003) moved = true;
+
+      e.at = [u, v];
+      const rgb = sampleAt(u, v);
+      if (rgb) {
+        e.rgb = rgb;
+        e.picked = true;
+      }
+      paint(i);
+    });
+
+    const finish = (ev) => {
+      if (pin.hasPointerCapture(ev.pointerId)) pin.releasePointerCapture(ev.pointerId);
+      pin.classList.remove('is-dragging');
+
+      const code = hex(...palette[i].rgb);
+      /* A press that went nowhere was meant as a click. */
+      if (!moved) copy(code, $('paletteStatus'));
+      else say($('paletteStatus'), '✓ Picked ' + code + ' from that spot.', 'ok');
+    };
+    pin.addEventListener('pointerup', finish);
+    pin.addEventListener('pointercancel', finish);
 
     /* Hovering either half lights the other, so it is obvious which
        swatch belongs to which spot. */
@@ -432,7 +535,7 @@ function renderSwatches() {
     sw.addEventListener('mouseenter', () => pair(true));
     sw.addEventListener('mouseleave', () => pair(false));
 
-    pins.appendChild(pin);
+    paint(i);
   });
 }
 

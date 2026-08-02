@@ -994,6 +994,9 @@ button.ghost:hover { color: #ff6b6b; border-color: #ff6b6b; }
   line-height: 1;
 }
 .marker.flip { flex-direction: row-reverse; }
+.marker { cursor: grab; touch-action: none; }
+.marker.is-dragging { cursor: grabbing; z-index: 2; }
+.marker.is-dragging .marker-dot { transform: scale(1.5); }
 
 .marker-dot {
   width: 20px;
