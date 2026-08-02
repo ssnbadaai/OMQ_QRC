@@ -377,6 +377,75 @@ function extract() {
 }
 
 
+
+/* ============================================================
+   The strip, live
+
+   The download can put the palette beside or under the picture, and
+   choosing between those without seeing them is guesswork. The same
+   arrangement is built here out of elements, so the preview is the
+   thing being exported rather than a description of it.
+
+   It is sized from the media's rendered box rather than given a fixed
+   width, because the markers are placed as a percentage of that box —
+   letting the layout stretch it would move every pin.
+   ============================================================ */
+function renderStrip() {
+  const strip = $('stageStrip');
+  strip.innerHTML = '';
+
+  palette.forEach((e, i) => {
+    const block = document.createElement('div');
+    block.className = 'strip-block';
+
+    const tag = document.createElement('span');
+    block.appendChild(tag);
+    strip.appendChild(block);
+
+    if (nodes[i]) Object.assign(nodes[i], { block, tag });
+    paintStrip(i);
+  });
+  layoutStrip();
+}
+
+function paintStrip(i) {
+  const e = palette[i];
+  const n = nodes[i];
+  if (!n || !n.block) return;
+
+  const code = hex(...e.rgb);
+  n.block.style.background = code;
+  n.tag.textContent = code;
+  n.tag.style.color = isLight(e.rgb) ? 'rgba(20,23,31,0.9)' : 'rgba(255,255,255,0.95)';
+}
+
+function layoutStrip() {
+  const mode = $('stripMode').value;
+  const strip = $('stageStrip');
+  const media = $('stageMedia');
+  const composite = $('stageComposite');
+
+  composite.classList.toggle('is-side', mode === 'side');
+  composite.classList.toggle('is-below', mode === 'below');
+
+  const off = mode === 'none' || !palette.length || !source;
+  strip.classList.toggle('hidden', off);
+  if (off) return;
+
+  const rect = media.getBoundingClientRect();
+  if (!rect.width) return;
+
+  /* The same proportions the export uses, so what is on screen is what
+     lands in the file. */
+  if (mode === 'side') {
+    strip.style.width = Math.max(56, Math.round(rect.width * 0.2)) + 'px';
+    strip.style.height = rect.height + 'px';
+  } else {
+    strip.style.width = rect.width + 'px';
+    strip.style.height = Math.max(34, Math.round(rect.height * 0.14)) + 'px';
+  }
+}
+
 /* ============================================================
    Export — the picture with its colours marked on it
 
@@ -566,7 +635,7 @@ function paint(i) {
   n.pin.classList.toggle('on-light', light);
   n.pin.classList.toggle('flip', e.at[0] > 0.72);
   n.dot.style.background = code;
-  n.tag.textContent = code;
+  n.markerTag.textContent = code;
 }
 
 function renderSwatches() {
@@ -609,12 +678,12 @@ function renderSwatches() {
     const dot = document.createElement('span');
     dot.className = 'marker-dot';
 
-    const tag = document.createElement('span');
-    tag.className = 'marker-hex';
+    const markerTag = document.createElement('span');
+    markerTag.className = 'marker-hex';
 
-    pin.append(dot, tag);
+    pin.append(dot, markerTag);
     pins.appendChild(pin);
-    Object.assign(nodes[i], { pin, dot, tag });
+    Object.assign(nodes[i], { pin, dot, markerTag });
 
     /* ---- drag to re-sample ----
        Pointer capture keeps the gesture with this marker even when the
@@ -648,6 +717,7 @@ function renderSwatches() {
         e.picked = true;
       }
       paint(i);
+      paintStrip(i);
     });
 
     const finish = (ev) => {
@@ -675,6 +745,8 @@ function renderSwatches() {
 
     paint(i);
   });
+
+  renderStrip();
 }
 
 $('swatchCount').addEventListener('input', () => {
@@ -684,12 +756,18 @@ $('swatchCount').addEventListener('input', () => {
 
 $('recomputeBtn').addEventListener('click', extract);
 
-['stripMode', 'showMarkers'].forEach((id) =>
-  $(id).addEventListener('input', () => {
-    /* Nothing to redraw on screen — the setting only shapes the file. */
-    say($('paletteStatus'), '');
-  })
-);
+$('stripMode').addEventListener('input', layoutStrip);
+$('showMarkers').addEventListener('input', () => {
+  $('markers').classList.toggle('hidden', !$('showMarkers').checked);
+});
+
+/* The media's rendered size drives both the strip and the markers, so
+   follow it rather than guessing when it might have changed. */
+if (window.ResizeObserver) {
+  new ResizeObserver(layoutStrip).observe($('stageMedia'));
+} else {
+  window.addEventListener('resize', layoutStrip);
+}
 
 $('downloadStudyBtn').addEventListener('click', () => {
   if (!palette.length) {
