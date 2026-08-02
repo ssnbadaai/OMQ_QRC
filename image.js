@@ -306,10 +306,22 @@ function medianCut(pixels, wanted) {
     .filter((b) => b.length)
     .map((box) => {
       const sum = box.reduce((acc, p) => [acc[0] + p[0], acc[1] + p[1], acc[2] + p[2]], [0, 0, 0]);
-      return {
-        rgb: sum.map((v) => v / box.length),
-        share: box.length / pixels.length,
-      };
+      const rgb = sum.map((v) => v / box.length);
+
+      /* Point at the pixel that best represents the box, so a swatch
+         can say where in the picture it came from. The average colour
+         may not exist anywhere in the image; a real member does. */
+      let at = null;
+      let best = Infinity;
+      for (const p of box) {
+        const v = (p[0] - rgb[0]) ** 2 + (p[1] - rgb[1]) ** 2 + (p[2] - rgb[2]) ** 2;
+        if (v < best) {
+          best = v;
+          at = [p[3], p[4]];
+        }
+      }
+
+      return { rgb, share: box.length / pixels.length, at };
     })
     .sort((a, b) => b.share - a.share);
 }
@@ -334,10 +346,18 @@ function extract() {
 
   const pixels = [];
   const d = data.data;
-  /* Every 4th pixel is plenty at this scale, and four times faster. */
+  /* Every 4th pixel is plenty at this scale, and four times faster.
+     Position rides along in slots 3 and 4, normalised, so it survives
+     the sorting median cut does and can be placed over the picture at
+     any display size. */
   for (let i = 0; i < d.length; i += 16) {
     if (d[i + 3] < 125) continue; // skip transparent
-    pixels.push([d[i], d[i + 1], d[i + 2]]);
+    const p = i >> 2;
+    pixels.push([
+      d[i], d[i + 1], d[i + 2],
+      (p % data.width) / data.width,
+      Math.floor(p / data.width) / data.height,
+    ]);
   }
 
   if (!pixels.length) {
@@ -352,16 +372,19 @@ function extract() {
 
 function renderSwatches() {
   const wrap = $('swatches');
+  const pins = $('markers');
   wrap.innerHTML = '';
+  pins.innerHTML = '';
 
-  palette.forEach((entry) => {
+  palette.forEach((entry, i) => {
     const code = hex(...entry.rgb);
+    const light = isLight(entry.rgb);
 
     const sw = document.createElement('button');
     sw.className = 'swatch plain';
     sw.style.background = code;
     sw.title = 'Copy ' + code;
-    if (isLight(entry.rgb)) sw.classList.add('on-light');
+    if (light) sw.classList.add('on-light');
 
     const label = document.createElement('span');
     label.className = 'swatch-hex';
@@ -374,6 +397,42 @@ function renderSwatches() {
     sw.append(label, share);
     sw.addEventListener('click', () => copy(code, $('paletteStatus')));
     wrap.appendChild(sw);
+
+    /* A PDF has no picture to point at. */
+    if (!entry.at) return;
+
+    const pin = document.createElement('button');
+    pin.className = 'marker plain' + (light ? ' on-light' : '');
+    pin.style.left = entry.at[0] * 100 + '%';
+    pin.style.top = entry.at[1] * 100 + '%';
+    pin.title = 'Copy ' + code;
+
+    const dot = document.createElement('span');
+    dot.className = 'marker-dot';
+    dot.style.background = code;
+
+    const tag = document.createElement('span');
+    tag.className = 'marker-hex';
+    tag.textContent = code;
+
+    /* Labels on the right half would run off the edge. */
+    if (entry.at[0] > 0.72) pin.classList.add('flip');
+
+    pin.append(dot, tag);
+    pin.addEventListener('click', () => copy(code, $('paletteStatus')));
+
+    /* Hovering either half lights the other, so it is obvious which
+       swatch belongs to which spot. */
+    const pair = (on) => {
+      pin.classList.toggle('is-lit', on);
+      sw.classList.toggle('is-lit', on);
+    };
+    pin.addEventListener('mouseenter', () => pair(true));
+    pin.addEventListener('mouseleave', () => pair(false));
+    sw.addEventListener('mouseenter', () => pair(true));
+    sw.addEventListener('mouseleave', () => pair(false));
+
+    pins.appendChild(pin);
   });
 }
 

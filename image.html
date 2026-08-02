@@ -8,7 +8,7 @@
   <title>OMQ Image Tools</title>
   <link rel="icon" href="IMG/omq-logo.png" />
   <link rel="apple-touch-icon" href="IMG/omq-logo.png" />
-  <link rel="stylesheet" href="styles.css?v=16" />
+  <link rel="stylesheet" href="styles.css?v=17" />
 </head>
 <body>
 
@@ -36,8 +36,13 @@
 
       <div class="hidden" id="stage">
         <div class="stage-frame">
-          <img id="sourceImg" class="hidden" alt="" />
-          <video id="sourceVideo" class="hidden" controls playsinline muted></video>
+          <!-- Shrink-wraps the media so the markers can be placed as a
+               percentage of the picture, not of the padded frame. -->
+          <div class="stage-media" id="stageMedia">
+            <img id="sourceImg" class="hidden" alt="" />
+            <video id="sourceVideo" class="hidden" controls playsinline muted></video>
+            <div class="markers" id="markers"></div>
+          </div>
         </div>
         <p class="muted-copy" id="frameHint"></p>
       </div>
@@ -125,7 +130,7 @@
     OMQ Image Tools · <a href="dev.html">Dev Tools</a> · <a href="index.html">Home</a>
   </footer>
 
-  <script src="api.js?v=16"></script>
-  <script src="image.js?v=16"></script>
+  <script src="api.js?v=17"></script>
+  <script src="image.js?v=17"></script>
 </body>
 </html>
