@@ -40,6 +40,12 @@ return [
        nobody in at all. */
     'allowed_emails' => [],
 
+    /* ---------- Optional helper service ----------
+       Better vector tracing and PDF colour extraction, from
+       service/. Leave empty and the browser does both itself, which
+       is what happens anyway if the service is not answering. */
+    'service_base' => '',
+
     /* ---------- Short link base ----------
        The public prefix a code is appended to. Stated explicitly
        rather than taken from the request: this is what ends up

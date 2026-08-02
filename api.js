@@ -31,6 +31,7 @@
           API.GOOGLE_CLIENT_ID = c.googleClientId || '';
           API.ALLOWED_DOMAIN = c.allowedDomain || '';
           API.SHORT_BASE = c.shortBase || location.origin + '/';
+          API.SERVICE_BASE = c.serviceBase || '';
           return c;
         })
         .catch((err) => {
@@ -380,6 +381,31 @@
     GOOGLE_CLIENT_ID: '',
     ALLOWED_DOMAIN: '',
     SHORT_BASE: location.origin + '/',
+    SERVICE_BASE: '',
+
+    /* The optional helper service. Asked once, cached, and never
+       retried within a page load: a tool that pauses to time out on
+       every action is worse than one that never had the better path.
+       Resolves to a base URL, or null. */
+    service: (() => {
+      let probe = null;
+      return () => {
+        if (!probe) {
+          probe = loadConfig()
+            .then(() => {
+              if (!API.SERVICE_BASE) return null;
+              /* Bounded: a hung service must not hang the tool. */
+              const cutoff = AbortSignal.timeout ? AbortSignal.timeout(2500) : undefined;
+              return fetch(API.SERVICE_BASE + '/health', { signal: cutoff })
+                .then((r) => (r.ok ? API.SERVICE_BASE : null))
+                .catch(() => null);
+            })
+            .catch(() => null);
+        }
+        return probe;
+      };
+    })(),
+
 
     loadConfig,
     mountButton,

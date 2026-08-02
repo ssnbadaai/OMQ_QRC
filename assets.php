@@ -89,6 +89,8 @@ try {
         }
 
         case 'colour': {
+            omq_check_rate($pdo, 'assets', $user['email']);
+
             $body = omq_body();
             $name = omq_clip((string) ($body['name'] ?? ''), 160);
             $hex  = strtoupper(trim((string) ($body['value'] ?? '')));
@@ -115,6 +117,8 @@ try {
         }
 
         case 'upload': {
+            omq_check_rate($pdo, 'assets', $user['email']);
+
             $kind = (string) ($_POST['kind'] ?? '');
             if (!isset(OMQ_ALLOWED[$kind])) {
                 throw new InvalidArgumentException('Unknown asset type.');
@@ -135,6 +139,7 @@ try {
             if ($file['size'] > OMQ_MAX_BYTES) {
                 throw new InvalidArgumentException('Files are limited to 20 MB.');
             }
+            omq_check_storage($pdo, (int) $file['size']);
             /* Proves the file really came through PHP's upload handling
                and is not an arbitrary path supplied by the caller. */
             if (!is_uploaded_file($file['tmp_name'])) {

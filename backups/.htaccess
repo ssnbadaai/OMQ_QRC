@@ -1,0 +1,4 @@
+# Database dumps. Nothing here is ever served.
+<IfModule mod_authz_core.c>
+  Require all denied
+</IfModule>

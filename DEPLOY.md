@@ -153,6 +153,29 @@ needs, so nothing in the repo has to be edited on the server — which is why
 | Continue with Google there | returns you to `/short.html`, signed in |
 | Shorten something, open the short link | lands on the destination |
 
+## 9. A nightly cron
+
+cPanel → **Cron Jobs**, once a day:
+
+```
+/usr/local/bin/php /home/USER/qr.omqpro.com/cron.php --delete
+```
+
+It writes a JSON dump of both tables into `backups/` (kept 30 days) and
+removes uploaded files that no longer have a row. Short links are the part
+that cannot be reconstructed — every printed QR code resolves through one row,
+and nothing on the site would tell you the table was gone until somebody
+scanned one.
+
+Run it once by hand first, without `--delete`, to see what it reports.
+
+## Optional: the helper service
+
+[`service/`](service/) does vector tracing and PDF colour extraction better
+than the browser can. It is genuinely optional — see
+[`service/README.md`](service/README.md). Leave `service_base` empty in
+`config.php` and everything works as it does now.
+
 ## Updating later
 
 Push to GitHub, then cPanel → **Git™ Version Control → Manage → Pull**.
@@ -160,9 +183,8 @@ Push to GitHub, then cPanel → **Git™ Version Control → Manage → Pull**.
 `config.php` is gitignored, so it is never touched. Nothing else on the server
 is hand-edited, so a pull can never conflict.
 
-**Bump the `?v=N` cache buster in every HTML file whenever `styles.css` or a
-script changes.** Browsers otherwise keep serving the old copy, which looks
-exactly like the CSS being broken.
+Nothing to bump: CSS and JS are served with `no-cache, must-revalidate`, so a
+browser checks each load and gets a 304 unless the file really changed.
 
 ---
 

@@ -244,6 +244,10 @@ Scans are counted per link and shown in the list.
 | `.htaccess` | Routing, and denying everything not meant to be served |
 | `styles.css` | Styles for every page |
 | `lib/` | [qr-code-styling](https://github.com/kozakdenys/qr-code-styling), vendored so the QR generator works offline |
+| `cron.php` | Nightly backup and orphan sweep — command line only |
+| `backups/` | JSON dumps. Denied over HTTP, contents gitignored |
+| `service/` | Optional Node helper — better tracing and PDF reading |
+| `util.js` | Helpers shared by every page |
 | `links.html` | Redirect to `short.html`, for old bookmarks |
 
 ## Known limits

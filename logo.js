@@ -632,6 +632,41 @@ function vectorise(src, levels, detail, smoothing) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${paths}\n</svg>`;
 }
 
+/* Potrace fits curves; the tracer here walks pixel edges and
+   simplifies, which corners where a curve belongs. So use the service
+   when there is one, and this when there is not — the difference is
+   quality, never whether the button works. */
+async function traceBest(data) {
+  const colours = Number($('colours').value);
+  const smooth = Number($('smooth').value);
+  const detail = Number($('detail').value);
+
+  const base = await API.service();
+  if (base) {
+    try {
+      const blob = await new Promise((r) => canvasOf(data).toBlob(r, 'image/png'));
+      const query = new URLSearchParams({
+        colours: String(colours),
+        smooth: String(1 + (smooth / 100) * 0.33),
+        speckle: String(Math.max(1, Math.round((100 - detail) / 12))),
+      });
+      const res = await fetch(`${base}/trace?${query}`, { method: 'POST', body: blob });
+      if (res.ok) {
+        const out = await res.text();
+        if (out.includes('<svg')) {
+          say($('vectorStatus'), 'Traced with fitted curves.', 'ok');
+          return out;
+        }
+      }
+    } catch {
+      /* Fall through. A service that is down is a quality setting, not
+         an error the user needs to hear about. */
+    }
+  }
+
+  return vectorise(data, colours, detail, smooth);
+}
+
 /* ============================================================
    Pipeline
    ============================================================ */
@@ -671,12 +706,7 @@ async function run() {
     working = data;
 
     if ($('vectorize').checked) {
-      svg = vectorise(
-        data,
-        Number($('colours').value),
-        Number($('detail').value),
-        Number($('smooth').value)
-      );
+      svg = await traceBest(data);
       $('resultImg').src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
       $('downloadSvg').classList.remove('hidden');
     } else {

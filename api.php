@@ -66,6 +66,7 @@ if ($action === 'config') {
         'googleClientId' => $config['google_client_id'],
         'allowedDomain'  => $config['allowed_domains'][0] ?? '',
         'shortBase'      => $config['short_base'],
+        'serviceBase'    => rtrim((string) ($config['service_base'] ?? ''), '/'),
     ]);
     exit;
 }
@@ -99,6 +100,8 @@ try {
         }
 
         case 'create': {
+            omq_check_rate($pdo, 'links', $user['email']);
+
             $body  = omq_body();
             $url   = omq_normalize_url((string) ($body['url'] ?? ''));
             $label = omq_clip((string) ($body['label'] ?? ''), 255);

@@ -105,6 +105,22 @@ function coloursFromContent(content, counts) {
 }
 
 async function coloursFromPdf(file) {
+  /* pdfjs walks the operator list properly, so a swatch inside an
+     object stream or a nested form is found like any other — neither
+     of which a regular expression over the raw bytes can see. */
+  const base = await API.service();
+  if (base) {
+    try {
+      const res = await fetch(base + '/pdf-colours', { method: 'POST', body: file });
+      if (res.ok) {
+        const { colours } = await res.json();
+        if (colours && colours.length) return colours;
+      }
+    } catch {
+      /* Fall through to reading it here. */
+    }
+  }
+
   const bytes = new Uint8Array(await file.arrayBuffer());
   const counts = new Map();
 

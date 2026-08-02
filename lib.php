@@ -112,6 +112,58 @@ function omq_ensure_schema(): void
     );
 }
 
+/* ---------- limits ----------
+
+   Both tables already record who made each row and when, so a rate is
+   a count over that rather than a counters table to keep in step with
+   reality. The cost is one indexed COUNT per write, which is nothing
+   beside the write itself.
+
+   These are not a defence against an attacker — everyone here is
+   signed in and known. They are a guard against a loop, a stuck
+   retry, or a script someone wrote at 2am. */
+const OMQ_LIMITS = [
+    'links'  => ['max' => 60,  'window' => '1 HOUR', 'what' => 'short links'],
+    'assets' => ['max' => 40,  'window' => '1 HOUR', 'what' => 'uploads'],
+];
+
+/* Total bytes the brand library may hold, across everyone. */
+const OMQ_STORAGE_CAP = 2 * 1024 * 1024 * 1024; // 2 GB
+
+function omq_check_rate(PDO $pdo, string $table, string $email): void
+{
+    $rule = OMQ_LIMITS[$table] ?? null;
+    if (!$rule) {
+        return;
+    }
+
+    /* The table name comes from the constant above, never from input. */
+    $stmt = $pdo->prepare(
+        "SELECT COUNT(*) FROM `$table`
+         WHERE `created_by` = ? AND `created_at` > (UTC_TIMESTAMP() - INTERVAL {$rule['window']})"
+    );
+    $stmt->execute([$email]);
+
+    if ((int) $stmt->fetchColumn() >= $rule['max']) {
+        omq_fail(429, sprintf(
+            'That is %d %s in an hour, which is past the limit. Wait a little and try again.',
+            $rule['max'],
+            $rule['what']
+        ));
+    }
+}
+
+function omq_check_storage(PDO $pdo, int $incoming): void
+{
+    $used = (int) $pdo->query('SELECT COALESCE(SUM(`bytes`), 0) FROM `assets`')->fetchColumn();
+    if ($used + $incoming > OMQ_STORAGE_CAP) {
+        omq_fail(507, sprintf(
+            'The brand library is full (%.1f GB). Delete something before adding more.',
+            $used / 1073741824
+        ));
+    }
+}
+
 /* ---------- validation ---------- */
 
 /* The site and the redirects share one document root, so a code must

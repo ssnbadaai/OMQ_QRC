@@ -1,0 +1,17 @@
+{
+  "name": "omq-helper",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Optional helper service: potrace tracing and pdfjs colour extraction for OMQ Tools",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "pdfjs-dist": "^4.6.82",
+    "potrace": "^2.1.8"
+  }
+}

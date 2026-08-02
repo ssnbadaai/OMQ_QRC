@@ -18,6 +18,11 @@ Options -Indexes
   <FilesMatch "\.(sql|md|example\.php)$">
     Require all denied
   </FilesMatch>
+  # Runs from cron and refuses HTTP itself; denied here as well so a
+  # PHP handler misconfiguration cannot turn it into a download.
+  <Files "cron.php">
+    Require all denied
+  </Files>
   # .git, .gitignore, .htaccess itself.
   <FilesMatch "^\.">
     Require all denied
@@ -68,11 +73,25 @@ Options -Indexes
   </FilesMatch>
 </IfModule>
 
-# Static assets carry a ?v= cache buster, so they can be cached hard.
+# Code is revalidated, pictures are cached.
+#
+# The alternative is a ?v=N on every asset URL, bumped by hand in every
+# page on every change. One missed bump serves a stale stylesheet over
+# fresh markup, which looks exactly like the CSS being broken and is
+# near-impossible to diagnose from the outside. This trades that for a
+# conditional request per file: the browser asks, the server answers 304
+# with no body, and the copy it already has is used.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(css|js)$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>
+
 <IfModule mod_expires.c>
   ExpiresActive On
-  ExpiresByType text/css                "access plus 1 year"
-  ExpiresByType application/javascript  "access plus 1 year"
-  ExpiresByType image/png               "access plus 1 month"
-  ExpiresByType text/html               "access plus 0 seconds"
+  ExpiresByType image/png   "access plus 1 month"
+  ExpiresByType image/jpeg  "access plus 1 month"
+  ExpiresByType image/webp  "access plus 1 month"
+  ExpiresByType image/svg+xml "access plus 1 month"
+  ExpiresByType text/html   "access plus 0 seconds"
 </IfModule>
