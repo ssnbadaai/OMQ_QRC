@@ -33,7 +33,7 @@ const TEMPLATES = {
     file: 'welcome-card',
     fields: [
       { id: 'heading', label: 'Heading', type: 'text',
-        en: 'Welcome on aboard', ar: 'أهلاً بك على متن الفريق' },
+        en: 'Welcome aboard,', ar: 'أهلاً بك معنا،' },
       { id: 'person', label: 'Name', type: 'text',
         en: 'Nooralhuda', ar: 'نور الهدى' },
       { id: 'body', label: 'Message', type: 'textarea',
@@ -126,7 +126,12 @@ function cardHtml(s, forClipboard) {
   const bodySize = Math.max(15, Math.round(h1 * 0.47));
   const radius = s.round ? 14 : 0;
 
-  const heading = [s.heading, s.person].filter(Boolean).join(' ');
+  /* The name sits on its own line rather than wherever the wrap
+     happens to fall, so the greeting reads the same at every width. */
+  const heading = [s.heading, s.person]
+    .filter(Boolean)
+    .map(esc)
+    .join('<br />');
   const href = linkFor(s.contact);
 
   const photo = s.photo
@@ -191,7 +196,7 @@ function cardHtml(s, forClipboard) {
         </tr>
         <tr>
           <td class="omq-pad" align="${side}" style="padding:34px 32px 6px;" dir="${dir}">
-            <h1 style="margin:0 0 14px;font:${h1}px/1.2 ${family};font-weight:400;color:${s.ink};">${esc(heading)}</h1>
+            <h1 style="margin:0 0 14px;font:${h1}px/1.2 ${family};font-weight:400;color:${s.ink};">${heading}</h1>
             ${body}
             <p style="margin:16px 0 0;font:${bodySize}px/1.6 ${family};color:${s.ink};">
               <strong>${esc(s.contactLabel)}</strong>
