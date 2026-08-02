@@ -747,6 +747,11 @@ function renderSwatches() {
   });
 
   renderStrip();
+
+  /* The download works for a PDF too — there the strip becomes the
+     whole file — but the composite settings need a picture. */
+  $('exportRow').classList.toggle('hidden', !palette.length);
+  $('compositeControls').classList.toggle('hidden', !source);
 }
 
 $('swatchCount').addEventListener('input', () => {

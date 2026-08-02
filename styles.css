@@ -1009,29 +1009,35 @@ button.ghost:hover { color: #ff6b6b; border-color: #ff6b6b; }
   pointer-events: none;
 }
 
+/* A zero-size anchor sitting exactly on the sampled pixel. The dot and
+   the label hang off it and are centred individually — translating the
+   whole marker by -50% would centre dot *and* label on the point, and
+   a wide label would carry the dot right off the picture. */
 .marker {
+  --dot: 20px;
   position: absolute;
-  display: flex;
-  align-items: center;
-  gap: 7px;
+  width: 0;
+  height: 0;
   padding: 0;
   min-height: 0;
   background: none;
   border: 0;
-  transform: translate(-50%, -50%);
-  pointer-events: auto;
-  cursor: pointer;
   line-height: 1;
+  pointer-events: auto;
+  cursor: grab;
+  touch-action: none;
 }
-.marker.flip { flex-direction: row-reverse; }
-.marker { cursor: grab; touch-action: none; }
 .marker.is-dragging { cursor: grabbing; z-index: 2; }
-.marker.is-dragging .marker-dot { transform: scale(1.5); }
+.marker.is-dragging .marker-dot { transform: translate(-50%, -50%) scale(1.5); }
 
 .marker-dot {
-  width: 20px;
-  height: 20px;
-  flex: 0 0 20px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--dot);
+  height: var(--dot);
+  /* Centres the dot itself, whatever size it is. */
+  transform: translate(-50%, -50%);
   border-radius: 50%;
   border: 2px solid rgba(255, 255, 255, 0.9);
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.5);
@@ -1044,6 +1050,10 @@ button.ghost:hover { color: #ff6b6b; border-color: #ff6b6b; }
 }
 
 .marker-hex {
+  position: absolute;
+  top: 0;
+  left: calc(var(--dot) / 2 + 6px);
+  transform: translateY(-50%);
   font-size: 11.5px;
   font-weight: 600;
   letter-spacing: 0.3px;
@@ -1054,10 +1064,13 @@ button.ghost:hover { color: #ff6b6b; border-color: #ff6b6b; }
   white-space: nowrap;
 }
 
-.marker.is-lit .marker-dot { transform: scale(1.35); }
+/* Past the right edge the label would hang off the picture. */
+.marker.flip .marker-hex { left: auto; right: calc(var(--dot) / 2 + 6px); }
+
+.marker.is-lit .marker-dot { transform: translate(-50%, -50%) scale(1.35); }
 .swatch.is-lit { border-color: var(--accent); }
 
 @media (max-width: 720px) {
+  .marker { --dot: 16px; }
   .marker-hex { font-size: 10px; padding: 2px 4px; }
-  .marker-dot { width: 16px; height: 16px; flex: 0 0 16px; }
 }
