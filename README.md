@@ -89,6 +89,16 @@ painted ones, and page white is discarded. The content streams are Flate, which
 the browser undoes itself, so no PDF library is involved. Both begin by getting pixels out of an image or a video frame,
 so they share the loader, the canvas, and whichever frame you have scrubbed to.
 
+Each colour is pinned to the spot it came from — a real member pixel, since the
+box average may exist nowhere in the picture — and a pin can be dragged
+anywhere to sample from there instead, reading a finer copy of the frame and
+averaging three by three the way an eyedropper does. Moving a pin drops its
+share figure, which described the quantiser's result and no longer applies.
+
+**Download image** writes the picture at source resolution with the markers
+drawn on and, optionally, the palette as a strip beside or under it. A PDF has
+no picture, so the strip becomes the whole file.
+
 Palettes come from a median-cut quantiser, which keeps distinct-but-uncommon
 colours that a plain frequency count buries under a large flat background. It
 works signed out; signing in adds *Save to Brand Kit*, which writes the palette

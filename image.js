@@ -376,6 +376,144 @@ function extract() {
   say($('paletteStatus'), '');
 }
 
+
+/* ============================================================
+   Export — the picture with its colours marked on it
+
+   Drawn at the source resolution rather than at preview size, so the
+   file is worth keeping. Everything scales off the image's short
+   side, which is what keeps a marker the same visual weight on a
+   phone screenshot and on a 4000px photograph.
+   ============================================================ */
+const EXPORT_MAX = 2400;
+const STUDY_FONT = '"Segoe UI", system-ui, -apple-system, Arial, sans-serif';
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(x, y, w, h, r);
+  else ctx.rect(x, y, w, h);
+}
+
+function drawMarkers(ctx, iw, ih) {
+  const r = Math.max(9, Math.round(Math.min(iw, ih) * 0.016));
+  const font = Math.round(r * 1.5);
+  const gap = r * 0.75;
+
+  ctx.textBaseline = 'middle';
+  ctx.font = `600 ${font}px ${STUDY_FONT}`;
+
+  palette.forEach((e) => {
+    if (!e.at) return;
+    const x = e.at[0] * iw;
+    const y = e.at[1] * ih;
+    const code = hex(...e.rgb);
+
+    const tw = ctx.measureText(code).width;
+    const padX = font * 0.5;
+    const boxW = tw + padX * 2;
+    const boxH = font * 1.7;
+
+    /* Past the right edge the label would hang off the picture. */
+    const flip = x + r + gap + boxW > iw;
+    const bx = flip ? x - r - gap - boxW : x + r + gap;
+    const by = y - boxH / 2;
+
+    ctx.fillStyle = 'rgba(12, 14, 24, 0.82)';
+    roundRect(ctx, bx, by, boxW, boxH, boxH * 0.28);
+    ctx.fill();
+
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'left';
+    ctx.fillText(code, bx + padX, y + 1);
+
+    /* Two rings, light over dark, so the dot reads on any photograph. */
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = code;
+    ctx.fill();
+    ctx.lineWidth = Math.max(1, r * 0.09);
+    ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x, y, r - ctx.lineWidth * 1.5, 0, Math.PI * 2);
+    ctx.lineWidth = Math.max(2, r * 0.18);
+    ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+    ctx.stroke();
+  });
+}
+
+/* Blocks of equal size, not sized by share: once a marker has been
+   dragged its share no longer describes anything. */
+function drawStrip(ctx, x, y, w, h, vertical) {
+  const n = palette.length;
+  if (!n) return;
+
+  const font = Math.max(11, Math.round((vertical ? w : h) * 0.115));
+  ctx.font = `600 ${font}px ${STUDY_FONT}`;
+  ctx.textBaseline = 'middle';
+
+  palette.forEach((e, i) => {
+    const bx = vertical ? x : x + (w / n) * i;
+    const by = vertical ? y + (h / n) * i : y;
+    const bw = vertical ? w : w / n;
+    const bh = vertical ? h / n : h;
+
+    const code = hex(...e.rgb);
+    ctx.fillStyle = code;
+    ctx.fillRect(bx, by, Math.ceil(bw), Math.ceil(bh));
+
+    ctx.fillStyle = isLight(e.rgb) ? 'rgba(20,23,31,0.9)' : 'rgba(255,255,255,0.95)';
+    ctx.textAlign = 'left';
+    ctx.fillText(code, bx + font * 0.7, by + bh / 2);
+  });
+}
+
+function buildStudy() {
+  const wantMarkers = $('showMarkers').checked;
+  const strip = $('stripMode').value;
+
+  let iw = 0;
+  let ih = 0;
+  if (source) {
+    const el = source.el;
+    const sw = source.kind === 'video' ? el.videoWidth : el.naturalWidth;
+    const sh = source.kind === 'video' ? el.videoHeight : el.naturalHeight;
+    const scale = Math.min(1, EXPORT_MAX / Math.max(sw, sh));
+    iw = Math.round(sw * scale);
+    ih = Math.round(sh * scale);
+  }
+
+  /* A PDF brings no picture, so the strip becomes the whole thing. */
+  if (!iw) {
+    const w = 420;
+    const rowH = 84;
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = rowH * palette.length;
+    const ctx = canvas.getContext('2d');
+    drawStrip(ctx, 0, 0, w, canvas.height, true);
+    return canvas;
+  }
+
+  const stripW = strip === 'side' ? Math.max(150, Math.round(iw * 0.2)) : 0;
+  const stripH = strip === 'below' ? Math.max(90, Math.round(ih * 0.14)) : 0;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = iw + stripW;
+  canvas.height = ih + stripH;
+
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(source.el, 0, 0, iw, ih);
+
+  if (wantMarkers) drawMarkers(ctx, iw, ih);
+  if (stripW) drawStrip(ctx, iw, 0, stripW, ih, true);
+  if (stripH) drawStrip(ctx, 0, ih, iw, stripH, false);
+
+  return canvas;
+}
+
 /* Averaged over three by three, the way an eyedropper does: a single
    pixel on a photograph is as likely to be sensor noise as colour. */
 function sampleAt(u, v) {
@@ -545,6 +683,28 @@ $('swatchCount').addEventListener('input', () => {
 });
 
 $('recomputeBtn').addEventListener('click', extract);
+
+['stripMode', 'showMarkers'].forEach((id) =>
+  $(id).addEventListener('input', () => {
+    /* Nothing to redraw on screen — the setting only shapes the file. */
+    say($('paletteStatus'), '');
+  })
+);
+
+$('downloadStudyBtn').addEventListener('click', () => {
+  if (!palette.length) {
+    say($('paletteStatus'), '⚠ Nothing to export yet.', 'warn');
+    return;
+  }
+  buildStudy().toBlob((blob) => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'palette.png';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    say($('paletteStatus'), '✓ Downloaded ' + a.download, 'ok');
+  }, 'image/png');
+});
 
 $('copyAllBtn').addEventListener('click', () =>
   copy(palette.map((p) => hex(...p.rgb)).join('\n'), $('paletteStatus'))

@@ -8,7 +8,7 @@
   <title>OMQ Image Tools</title>
   <link rel="icon" href="IMG/omq-logo.png" />
   <link rel="apple-touch-icon" href="IMG/omq-logo.png" />
-  <link rel="stylesheet" href="styles.css?v=18" />
+  <link rel="stylesheet" href="styles.css?v=19" />
 </head>
 <body>
 
@@ -71,8 +71,24 @@
         instead. Click one to copy it. <b>Re-read frame</b> puts them back.
       </p>
 
+      <div class="field-row">
+        <label>Palette strip
+          <select id="stripMode">
+            <option value="side" selected>Beside the image</option>
+            <option value="below">Under the image</option>
+            <option value="none">None</option>
+          </select>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" id="showMarkers" checked /> Markers on the image
+        </label>
+      </div>
+
       <div class="actions">
+        <button id="downloadStudyBtn">Download image</button>
         <button class="secondary" id="copyAllBtn">Copy all hex</button>
+      </div>
+      <div class="actions">
         <button class="secondary hidden" id="saveToBrandBtn">Save to Brand Kit</button>
       </div>
       <p class="status" id="paletteStatus"></p>
@@ -135,7 +151,7 @@
     OMQ Image Tools · <a href="dev.html">Dev Tools</a> · <a href="index.html">Home</a>
   </footer>
 
-  <script src="api.js?v=18"></script>
-  <script src="image.js?v=18"></script>
+  <script src="api.js?v=19"></script>
+  <script src="image.js?v=19"></script>
 </body>
 </html>
