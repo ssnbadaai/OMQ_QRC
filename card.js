@@ -317,12 +317,17 @@ function cardHtml(s, forClipboard) {
     .join('<br />');
   const href = linkFor(s.contact);
 
+  /* Full bleed: the photo is the top of the card, not a picture sitting
+     on it. Only the top corners are rounded — email clients widely
+     ignore overflow:hidden, so the image has to round its own. */
+  const topCorners = radius ? `border-radius:${radius}px ${radius}px 0 0;` : '';
+
   const photo = s.photo
-    ? `<img src="${esc(s.photo)}" width="${WIDTH - 56}" alt=""
-             style="display:block;width:100%;max-width:${WIDTH - 56}px;height:auto;border:0;
-                    outline:none;text-decoration:none;border-radius:6px;" />`
-    : `<div style="background:rgba(255,255,255,.09);border-radius:6px;padding:64px 12px;
-                   color:rgba(255,255,255,.55);font:15px ${family};text-align:center;">
+    ? `<img src="${esc(s.photo)}" width="${WIDTH}" alt=""
+             style="display:block;width:100%;max-width:${WIDTH}px;height:auto;border:0;
+                    outline:none;text-decoration:none;${topCorners}" />`
+    : `<div style="padding:104px 16px;color:rgba(255,255,255,.55);
+                   font:15px ${family};text-align:center;${topCorners}">
          Add a photo
        </div>`;
 
@@ -384,7 +389,7 @@ function cardHtml(s, forClipboard) {
              style="width:100%;max-width:${WIDTH}px;background:${s.paper};border-radius:${radius}px;
                     overflow:hidden;border-collapse:separate;">
         <tr>
-          <td align="center" style="background:${s.dark};padding:28px;">
+          <td align="center" style="background:${s.dark};padding:0;font-size:0;line-height:0;">
             ${photo}
           </td>
         </tr>
