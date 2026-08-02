@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1220" />
+  <meta name="robots" content="noindex" />
+  <title>OMQ Email Cards</title>
+  <link rel="icon" href="IMG/omq-logo.png" />
+  <link rel="apple-touch-icon" href="IMG/omq-logo.png" />
+  <link rel="stylesheet" href="styles.css?v=7" />
+</head>
+<body>
+
+  <header class="topbar">
+    <a class="brand" href="dev.html">
+      <img src="IMG/omq-logo.png" alt="OMQ" class="brand-logo" />
+      <span class="brand-name">OMQ <b>Email Cards</b></span>
+    </a>
+    <div class="topbar-right">
+      <span class="account" id="authAccount"></span>
+      <a class="topbar-link" href="dev.html">Dev Tools →</a>
+    </div>
+  </header>
+
+  <main class="card-layout">
+
+    <!-- ============ PREVIEW ============ -->
+    <section class="panel card-preview-panel">
+      <h2>Preview</h2>
+
+      <div class="card-stage">
+        <canvas id="cardCanvas"></canvas>
+      </div>
+
+      <div class="export-row">
+        <label>Width
+          <select id="exportWidth">
+            <option value="600">600 px — email body</option>
+            <option value="1200" selected>1200 px — retina</option>
+            <option value="1800">1800 px — print/social</option>
+          </select>
+        </label>
+        <label>File name
+          <input type="text" id="fileName" placeholder="welcome-card" />
+        </label>
+      </div>
+
+      <div class="actions">
+        <button id="downloadBtn">Download PNG</button>
+        <button id="copyBtn" class="secondary">Copy image</button>
+      </div>
+      <p class="status" id="exportStatus">Paste straight into your email.</p>
+    </section>
+
+    <!-- ============ CONTENT ============ -->
+    <section class="panel">
+      <h2>Content</h2>
+
+      <div class="field-row">
+        <label>Template
+          <select id="templateSelect"></select>
+        </label>
+        <label>Language
+          <select id="langSelect">
+            <option value="en" selected>English — left to right</option>
+            <option value="ar">العربية — right to left</option>
+          </select>
+        </label>
+      </div>
+
+      <div id="fields"></div>
+    </section>
+
+    <!-- ============ DESIGN ============ -->
+    <section class="panel">
+      <h2>Design</h2>
+
+      <h3>Photo</h3>
+      <label class="file-label">
+        <input type="file" id="photoInput" accept="image/*" />
+        <span id="photoText">Choose a photo</span>
+      </label>
+      <div class="field-row">
+        <label class="checkbox-label">
+          <input type="checkbox" id="photoMono" checked /> Black and white
+        </label>
+        <button type="button" id="removePhotoBtn" class="ghost hidden">✕ Remove</button>
+      </div>
+      <div class="field-row">
+        <label>Position
+          <input type="range" id="photoY" min="0" max="100" step="1" value="50" />
+          <span class="range-val" id="photoYVal">50%</span>
+        </label>
+        <label>Zoom
+          <input type="range" id="photoZoom" min="100" max="220" step="2" value="100" />
+          <span class="range-val" id="photoZoomVal">100%</span>
+        </label>
+      </div>
+
+      <h3>Colours</h3>
+      <div class="field-row">
+        <label>Accent
+          <input type="color" id="accentColor" value="#24a8ac" />
+        </label>
+        <label>Header
+          <input type="color" id="darkColor" value="#141414" />
+        </label>
+        <label>Background
+          <input type="color" id="paperColor" value="#ffffff" />
+        </label>
+      </div>
+      <p class="muted-copy hidden" id="brandColours"></p>
+
+      <h3>Type</h3>
+      <div class="field-row">
+        <label>Heading
+          <select id="headingFont"></select>
+        </label>
+        <label>Body
+          <select id="bodyFont"></select>
+        </label>
+      </div>
+      <div class="field-row">
+        <label>Heading size
+          <input type="range" id="headingSize" min="38" max="84" step="1" value="62" />
+          <span class="range-val" id="headingSizeVal">62</span>
+        </label>
+      </div>
+
+      <h3>Elements</h3>
+      <label class="checkbox-label">
+        <input type="checkbox" id="showGlow" checked /> Coloured glow behind the photo
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" id="showZigzag" checked /> Zigzag corner
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" id="showLogo" checked /> OMQ logo
+      </label>
+
+      <label class="file-label">
+        <input type="file" id="badgeInput" accept="image/*" />
+        <span id="badgeText">Corner badge — optional artwork</span>
+      </label>
+      <div class="field-row">
+        <button type="button" id="removeBadgeBtn" class="ghost hidden">✕ Remove badge</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    OMQ Email Cards · <a href="dev.html">Dev Tools</a> · <a href="index.html">Home</a>
+  </footer>
+
+  <script src="api.js?v=7"></script>
+  <script src="card.js?v=7"></script>
+</body>
+</html>

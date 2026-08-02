@@ -26,7 +26,8 @@ and the Brand Kit do, and those redirect rather than showing a gate.
 
 ## Dev Tools
 
-Four ideas, built as two tools, because each pair shares a base.
+Four ideas, built as two tools, because each pair shares a base — plus a
+third for building email cards.
 
 **Brand Kit** ([`brand.html`](brand.html)) — logos, icons, colours, fonts and
 templates. A brand asset library and an icon library differ only in what they
@@ -49,7 +50,23 @@ colours that a plain frequency count buries under a large flat background. It
 works signed out; signing in adds *Save to Brand Kit*, which writes the palette
 straight into the colours tab.
 
-The font side **compares** rather than identifies: it loads the Brand Kit fonts
+**Email Cards** ([`card.html`](card.html)) — the welcome-aboard card and its
+relatives. Drawn on a canvas rather than laid out in HTML, for two reasons:
+what you see is exactly what exports, and email clients mangle CSS but never
+mangle a PNG. Export is a download or a straight copy to the clipboard.
+
+Adding a card type is one entry in `TEMPLATES` — a label, a list of fields and
+a draw function. Photo, colours, type, language and export are shared, so the
+second card cost almost nothing and the third will cost less.
+
+Arabic is treated as a layout direction, not a translation. Every template
+carries text in both languages and keeps them separately, so switching back and
+forth loses nothing. The canvas text engine shapes and orders the glyphs; one
+`align()` helper decides which edge a line starts from, and the footer order
+flips, so no drawing code has to reason about direction. Fonts from the Brand
+Kit are selectable, and its colours appear as one-click accent swatches.
+
+The font side of Image Tools **compares** rather than identifies: it loads the Brand Kit fonts
 and renders your sample text beside the image, answering "is this one of ours,
 and which". Identifying an arbitrary font needs a model trained on a large font
 corpus — see [Known limits](#known-limits).
@@ -120,6 +137,7 @@ Scans are counted per link and shown in the list.
 | `dev.html` | Dev tools hub |
 | `brand.html`, `brand.js` | Brand Kit (UI) |
 | `image.html`, `image.js` | Image Tools — palette and fonts |
+| `card.html`, `card.js` | Email Cards — canvas card builder |
 | `assets.php` | Brand Kit API — list / upload / colour / delete |
 | `assets/` | Uploaded brand files. Contents gitignored; the folder and its `.htaccess` are tracked |
 | `login.html`, `login.js` | The one sign-in screen |
