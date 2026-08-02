@@ -57,29 +57,10 @@ const hex = (r, g, b) =>
    the edges can only remove background that is actually connected to
    the edge.
    ============================================================ */
-function removeBackground(src, tolerance, feather) {
+function removeBackground(src, tolerance, feather, enclosed, holeLimit) {
   const { width: w, height: h } = src;
   const d = new Uint8ClampedArray(src.data);
-  const seen = new Uint8Array(w * h);
-  const stack = [];
-
-  /* Seed from every border pixel, so a logo on a two-tone backdrop
-     still clears completely. */
-  const seed = (x, y) => {
-    const p = y * w + x;
-    if (!seen[p]) {
-      seen[p] = 1;
-      stack.push(p);
-    }
-  };
-  for (let x = 0; x < w; x++) {
-    seed(x, 0);
-    seed(x, h - 1);
-  }
-  for (let y = 0; y < h; y++) {
-    seed(0, y);
-    seed(w - 1, y);
-  }
+  const cleared = new Uint8Array(w * h);
 
   /* Reference colours are the four corners: enough for a flat or
      lightly graded background, and cheap. */
@@ -88,7 +69,7 @@ function removeBackground(src, tolerance, feather) {
     return [d[i], d[i + 1], d[i + 2]];
   });
 
-  /* Squared distance to the nearest corner colour. */
+  /* Distance to the nearest corner colour. */
   const distance = (i) => {
     let best = Infinity;
     for (const [r, g, b] of refs) {
@@ -102,31 +83,82 @@ function removeBackground(src, tolerance, feather) {
   };
 
   const hard = tolerance;
-  /* Beyond `hard`, alpha ramps down over `soft` instead of stopping
-     dead — which is what keeps antialiased edges from turning into a
+  /* Beyond `hard`, alpha ramps down over `soft` rather than stopping
+     dead — which is what keeps antialiased edges from becoming a
      staircase of hard pixels. */
   const soft = Math.max(1, (tolerance * feather) / 100);
+  const isBackground = (p) => distance(p * 4) <= hard + soft;
 
-  const out = [];
-  while (stack.length) {
-    const p = stack.pop();
+  const wipe = (p) => {
     const i = p * 4;
     const dist = distance(i);
-    if (dist > hard + soft) continue;
-
-    out.push([i, dist]);
-
-    const x = p % w;
-    const y = (p / w) | 0;
-    if (x > 0 && !seen[p - 1]) (seen[p - 1] = 1), stack.push(p - 1);
-    if (x < w - 1 && !seen[p + 1]) (seen[p + 1] = 1), stack.push(p + 1);
-    if (y > 0 && !seen[p - w]) (seen[p - w] = 1), stack.push(p - w);
-    if (y < h - 1 && !seen[p + w]) (seen[p + w] = 1), stack.push(p + w);
-  }
-
-  for (const [i, dist] of out) {
     const alpha = dist <= hard ? 0 : Math.min(1, (dist - hard) / soft);
     d[i + 3] = Math.min(d[i + 3], Math.round(alpha * 255));
+    cleared[p] = 1;
+  };
+
+  /* Collects one connected run of background pixels from `seeds`.
+     Connectivity is the whole point: it is what separates the page
+     around the mark from the page sealed inside a letter. */
+  /* One buffer for every walk, stamped with a generation instead of
+     being cleared — pass two calls this once per trapped region, and
+     allocating a full-image array each time would cost more than the
+     work itself. */
+  const stamp = new Int32Array(w * h);
+  let generation = 0;
+
+  const region = (seeds) => {
+    const mark = ++generation;
+    const found = [];
+    const stack = seeds.filter((p) => !cleared[p] && isBackground(p));
+    stack.forEach((p) => (stamp[p] = mark));
+
+    while (stack.length) {
+      const p = stack.pop();
+      found.push(p);
+
+      const x = p % w;
+      const y = (p / w) | 0;
+      const push = (q) => {
+        if (stamp[q] !== mark && !cleared[q] && isBackground(q)) {
+          stamp[q] = mark;
+          stack.push(q);
+        }
+      };
+      if (x > 0) push(p - 1);
+      if (x < w - 1) push(p + 1);
+      if (y > 0) push(p - w);
+      if (y < h - 1) push(p + w);
+    }
+    return found;
+  };
+
+  /* Pass one: the background proper, reached from the border. */
+  const border = [];
+  for (let x = 0; x < w; x++) {
+    border.push(x, (h - 1) * w + x);
+  }
+  for (let y = 0; y < h; y++) {
+    border.push(y * w, y * w + w - 1);
+  }
+  region(border).forEach(wipe);
+
+  /* Pass two: what pass one could not reach. A counter is background
+     that a letter happens to enclose, so it is only removable once the
+     outside has been dealt with and it can be measured on its own. */
+  if (enclosed !== 'keep') {
+    const limit = (holeLimit / 100) * w * h;
+    for (let p = 0; p < w * h; p++) {
+      if (cleared[p] || !isBackground(p)) continue;
+      const found = region([p]);
+      if (enclosed === 'all' || found.length <= limit) {
+        found.forEach(wipe);
+      } else {
+        /* Too big to be a counter — leave it, and mark it so the scan
+           does not walk the same region again. */
+        found.forEach((q) => (cleared[q] = 1));
+      }
+    }
   }
 
   return new ImageData(d, w, h);
@@ -509,7 +541,13 @@ async function run() {
     let data = source;
 
     if ($('removeBg').checked) {
-      data = removeBackground(data, Number($('tolerance').value), Number($('feather').value));
+      data = removeBackground(
+        data,
+        Number($('tolerance').value),
+        Number($('feather').value),
+        $('enclosed').value,
+        Number($('holeSize').value)
+      );
     }
     if ($('trim').checked) data = trim(data);
 
@@ -595,16 +633,17 @@ const drop = $('dropZone');
 drop.addEventListener('drop', (e) => load(e.dataTransfer.files[0]));
 
 [['tolerance', 'toleranceVal'], ['feather', 'featherVal'], ['sharpen', 'sharpenVal'],
+ ['holeSize', 'holeSizeVal', '%'],
  ['colours', 'coloursVal'], ['detail', 'detailVal'], ['smooth', 'smoothVal']].forEach(
-  ([id, out]) => {
+  ([id, out, unit]) => {
     $(id).addEventListener('input', () => {
-      $(out).textContent = $(id).value;
+      $(out).textContent = $(id).value + (unit || '');
       refresh();
     });
   }
 );
 
-['removeBg', 'trim', 'scale', 'vectorize'].forEach((id) =>
+['removeBg', 'trim', 'scale', 'vectorize', 'enclosed'].forEach((id) =>
   $(id).addEventListener('input', () => {
     if (id === 'vectorize') {
       $('vectorControls').classList.toggle('is-off', !$('vectorize').checked);

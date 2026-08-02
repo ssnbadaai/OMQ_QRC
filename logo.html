@@ -8,7 +8,7 @@
   <title>OMQ Logo Lab</title>
   <link rel="icon" href="IMG/omq-logo.png" />
   <link rel="apple-touch-icon" href="IMG/omq-logo.png" />
-  <link rel="stylesheet" href="styles.css?v=14" />
+  <link rel="stylesheet" href="styles.css?v=15" />
 </head>
 <body>
 
@@ -78,12 +78,28 @@
           <span class="range-val" id="featherVal">45</span>
         </label>
       </div>
+      <div class="field-row">
+        <label>Enclosed areas
+          <select id="enclosed">
+            <option value="keep">Keep — solid marks</option>
+            <option value="small" selected>Clear small — letter counters</option>
+            <option value="all">Clear all</option>
+          </select>
+        </label>
+        <label>Largest to clear
+          <input type="range" id="holeSize" min="1" max="40" step="1" value="8" />
+          <span class="range-val" id="holeSizeVal">8%</span>
+        </label>
+      </div>
+
       <label class="checkbox-label">
         <input type="checkbox" id="trim" checked /> Trim empty space around it
       </label>
       <p class="muted-copy">
-        Works by spreading inwards from the edges, so an enclosed colour — the
-        middle of an <b>O</b>, a white shape inside the mark — is kept.
+        Removal spreads inwards from the edges, so background sealed inside a
+        shape is never reached — the white left in the middle of an <b>O</b>.
+        <b>Clear small</b> takes those out afterwards while leaving any large
+        area the design meant to be there.
       </p>
 
       <h3><span class="step">2</span> Size</h3>
@@ -147,7 +163,7 @@
     OMQ Logo Lab · <a href="dev.html">Dev Tools</a> · <a href="index.html">Home</a>
   </footer>
 
-  <script src="api.js?v=14"></script>
-  <script src="logo.js?v=14"></script>
+  <script src="api.js?v=15"></script>
+  <script src="logo.js?v=15"></script>
 </body>
 </html>

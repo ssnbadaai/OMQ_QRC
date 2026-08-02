@@ -49,9 +49,15 @@ an upscale only ever guesses.
 
 Background removal spreads inwards from the border rather than deleting every
 pixel of a given colour — connectivity is the whole trick, since a global
-delete punches holes through the middle of an **O**. Alpha ramps down past the
-tolerance instead of stopping dead, so antialiased edges do not become a
+delete would take out any white the design meant to keep. Alpha ramps down past
+the tolerance instead of stopping dead, so antialiased edges do not become a
 staircase.
+
+The consequence is that background sealed inside a shape is never reached: the
+white left in the middle of an **O**. A second pass measures each of those
+trapped regions on its own and clears the small ones, so letter counters go and
+a large intentional panel stays. **Keep**, **Clear small** and **Clear all**
+choose between the three behaviours, with the size limit adjustable.
 
 Enlargement is Lanczos-3, on premultiplied alpha: resampling colour and alpha
 separately drags the colour of transparent pixels into the visible edge and
