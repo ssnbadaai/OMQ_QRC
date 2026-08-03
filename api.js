@@ -10,6 +10,7 @@
 (function (global) {
   const API_BASE = 'api.php';
   const ASSET_BASE = 'assets.php';
+  const SCRAPE_BASE = 'scrape.php';
   const TOKEN_KEY = 'omq-google-token';
 
   let onSignedIn = null;
@@ -441,6 +442,15 @@
       colour: (c) => call('colour', c, { base: ASSET_BASE }),
       upload: (form) => call('upload', null, { base: ASSET_BASE, form }),
       remove: (id) => call('delete', { id }, { base: ASSET_BASE }),
+    },
+
+    /* Scraper. One fetch per call: the loop that decides what to ask
+       for next lives in scrape.js, so nothing here runs long. */
+    scrape: {
+      probe: (body) => call('probe', body, { base: SCRAPE_BASE }),
+      api: (body) => call('api', body, { base: SCRAPE_BASE }),
+      sitemap: (body) => call('sitemap', body, { base: SCRAPE_BASE }),
+      pages: (body) => call('pages', body, { base: SCRAPE_BASE }),
     },
 
     normalizeUrl,

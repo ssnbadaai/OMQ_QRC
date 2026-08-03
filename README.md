@@ -26,8 +26,8 @@ and the Brand Kit do, and those redirect rather than showing a gate.
 
 ## Dev Tools
 
-Four ideas, built as two tools, because each pair shares a base — plus a
-third for building email cards.
+Four ideas, built as two tools, because each pair shares a base — plus one for
+building email cards and one for archiving a site.
 
 **Brand Kit** ([`brand.html`](brand.html)) — logos, icons, colours, fonts and
 templates. A brand asset library and an icon library differ only in what they
@@ -164,6 +164,43 @@ The font side of Image Tools **compares** rather than identifies: it loads the B
 and renders your sample text beside the image, answering "is this one of ours,
 and which". Identifying an arbitrary font needs a model trained on a large font
 corpus — see [Known limits](#known-limits).
+
+**Scraper** ([`scrape.html`](scrape.html)) — archives a site as JSON. It asks
+for the structured sources a site already publishes for machines before it
+considers reading pages: the WordPress REST API, then the XML sitemaps, then —
+only if asked — the text of every address those turned up. The first two are a
+handful of requests and return clean data; the third is one request per page and
+takes hours on a large site, which is why it is off by default.
+
+**The loop lives in the browser, not the server.** `scrape.php` fetches one
+thing per call and returns; `scrape.js` decides what to ask for next and holds
+the result. So a crawl of any size never needs a long-running request, *Stop*
+takes effect within one request because between two calls there is nothing
+running, and nothing is written on the server — no table, no files, nothing to
+clean up after a crawl that was abandoned. The cost is that the result lives in
+the tab, which is why *Download* is offered as soon as there is anything to
+download rather than only at the end.
+
+Fetching a caller-supplied URL server-side is an open proxy into everything the
+host can reach and the public internet cannot — `127.0.0.1`, the metadata
+service on `169.254.169.254`, other tenants. Being signed in does not make that
+safe, since none of those are the site the user named. So every URL, **including
+each redirect hop**, is resolved here and refused unless every address the name
+answers with is public, and the connection is then pinned to the address that
+was checked — otherwise a name that answers publicly once and privately a moment
+later passes the check and connects elsewhere.
+
+robots.txt is fetched, parsed and applied **on the server**. The browser is sent
+the rules so it can show them, and sends them back on each call, but the client
+deciding what it is allowed to fetch is not a check. A `Crawl-delay` the site
+asks for overrides a faster pace chosen in the page: asking and then ignoring
+the answer is worse than never asking. One crawl per person at a time, enforced
+by a lock file — fifty concurrent calls of five fetches each is an attack
+arriving from this company's address, whatever the intent was.
+
+The optional **Cookie header** exists for member-only content. It is held in the
+tab, sent with each request, never stored and never logged. It is for an account
+you hold, for content you are allowed to read.
 
 The two are deliberately independent. QR Studio can *offer* to make a short
 link, so a printed code can be re-pointed later, but it does not need one and

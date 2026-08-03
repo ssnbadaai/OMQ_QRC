@@ -181,6 +181,7 @@ const OMQ_RESERVED = [
     'colour', 'colours', 'color', 'colors', 'icon', 'icons', 'palette',
     'card', 'cards', 'email', 'emails', 'template', 'templates',
     'logo', 'logos', 'vector', 'vectors', 'trace', 'upscale', 'pdf',
+    'scrape', 'scraper', 'crawl', 'crawler', 'archive',
 ];
 
 /* Ambiguous glyphs are left out so a code survives being read aloud

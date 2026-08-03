@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1220" />
+  <meta name="robots" content="noindex" />
+  <title>OMQ Scraper</title>
+  <link rel="icon" href="IMG/omq-logo.png" />
+  <link rel="apple-touch-icon" href="IMG/omq-logo.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <header class="topbar">
+    <a class="brand" href="dev.html">
+      <img src="IMG/omq-logo.png" alt="OMQ" class="brand-logo" />
+      <span class="brand-name">OMQ <b>Scraper</b></span>
+    </a>
+    <div class="topbar-right">
+      <span class="account" id="authAccount"></span>
+      <a class="topbar-link" href="dev.html">Dev Tools →</a>
+    </div>
+  </header>
+
+  <main class="admin-wrap">
+
+    <!-- ============ SITE ============ -->
+    <section class="panel">
+      <h2><span class="step">1</span> The site</h2>
+
+      <label>Address
+        <input type="url" id="siteInput" inputmode="url"
+               placeholder="https://example.com"
+               autocapitalize="off" autocorrect="off" spellcheck="false" />
+      </label>
+
+      <div class="field-row">
+        <label>Pause between requests
+          <select id="delayInput">
+            <option value="3">3 seconds — gentlest</option>
+            <option value="1.5" selected>1.5 seconds</option>
+            <option value="0.7">0.7 seconds</option>
+            <option value="0">None — only for a site you run</option>
+          </select>
+        </label>
+        <label>Stop after <span class="opt">pages</span>
+          <input type="number" id="capInput" min="0" step="50" value="500" />
+        </label>
+      </div>
+
+      <h3>Collect</h3>
+      <label class="checkbox-label">
+        <input type="checkbox" id="wantApi" checked />
+        WordPress REST API — posts, pages, categories, comments, media
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" id="wantSitemap" checked />
+        Sitemaps — the full list of public addresses
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" id="wantPages" />
+        Page text — fetch and extract every address found above
+      </label>
+
+      <p class="muted-copy">
+        The first two are structured data the site already publishes for
+        machines: fast, clean, and a handful of requests. Page text is one
+        request per address, so a site of a few thousand pages takes hours at a
+        polite pace. Start without it and see what the other two return.
+      </p>
+
+      <details class="how-to">
+        <summary>Signed-in content, and robots.txt</summary>
+        <label>Cookie header <span class="opt">optional</span>
+          <input type="password" id="cookieInput" placeholder="wordpress_logged_in_xxx=…; other=…"
+                 autocapitalize="off" autocorrect="off" spellcheck="false" />
+        </label>
+        <p class="muted-copy">
+          Sent with each request so member-only pages return their real
+          content. Use your own account, for content you are allowed to read.
+          It is held in this tab only — never saved, never logged, gone when
+          you close the page.
+        </p>
+
+        <label class="checkbox-label">
+          <input type="checkbox" id="obeyRobots" checked />
+          Respect robots.txt
+        </label>
+        <p class="muted-copy hidden" id="robotsWarning">
+          Turning this off means fetching paths the site has asked crawlers to
+          leave alone. Only do that on a site you run, or with its owner's
+          permission.
+        </p>
+      </details>
+
+      <div class="actions">
+        <button id="probeBtn">Check the site</button>
+      </div>
+      <p class="status" id="probeStatus"></p>
+
+      <div class="hidden" id="planCard">
+        <div class="result">
+          <span class="result-label">What is available</span>
+          <div id="planBody"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ RUN ============ -->
+    <section class="panel hidden" id="runPanel">
+      <h2><span class="step">2</span> Collect</h2>
+
+      <div class="actions">
+        <button id="startBtn">Start</button>
+        <button class="ghost hidden" id="stopBtn">Stop</button>
+      </div>
+
+      <div class="progress" id="progress">
+        <div class="progress-bar"><span id="progressFill"></span></div>
+        <p class="progress-note" id="progressNote">Ready.</p>
+      </div>
+
+      <div class="tally" id="tally"></div>
+
+      <h3>Log</h3>
+      <div class="log" id="log"></div>
+    </section>
+
+    <!-- ============ RESULT ============ -->
+    <section class="panel hidden" id="resultPanel">
+      <h2><span class="step">3</span> Take it away</h2>
+
+      <p class="muted-copy" id="resultSummary"></p>
+
+      <div class="actions">
+        <button id="downloadBtn">Download JSON</button>
+        <button class="secondary" id="downloadTextBtn">Download text only</button>
+      </div>
+      <p class="status" id="resultStatus"></p>
+
+      <p class="muted-copy">
+        Nothing is kept on the server — this all lives in the tab until you
+        download it. Closing the page loses it.
+      </p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    OMQ Scraper · <a href="dev.html">Dev Tools</a> · <a href="index.html">Home</a>
+  </footer>
+
+  <script src="util.js"></script>
+  <script src="api.js"></script>
+  <script src="scrape.js"></script>
+</body>
+</html>

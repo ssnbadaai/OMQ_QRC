@@ -1070,3 +1070,107 @@ button.ghost:hover { color: #ff6b6b; border-color: #ff6b6b; }
   .marker { --dot: 16px; }
   .marker-hex { font-size: 10px; padding: 2px 4px; }
 }
+
+/* =========================================================
+   SCRAPER (scrape.html)
+   ========================================================= */
+
+/* What was found before committing to a crawl. */
+.plan-row {
+  display: flex;
+  gap: 12px;
+  margin: 0 0 6px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.plan-row b { flex: 0 0 96px; color: var(--muted); font-weight: 500; }
+.plan-row span { min-width: 0; word-break: break-word; }
+.plan-ok span { color: var(--text); }
+.plan-muted span { color: var(--muted); }
+
+.progress { margin: 16px 0 6px; }
+
+.progress-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.progress-bar span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  transition: width 0.25s;
+}
+
+/* Counting sitemaps or REST pages, where the total is not known until
+   the site says so. A bar that sat at zero would read as stalled. */
+.progress.is-waiting .progress-bar span {
+  width: 35%;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  animation: progress-sweep 1.4s linear infinite;
+}
+@keyframes progress-sweep {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(340%); }
+}
+
+.progress-note {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress-bar span { transition: none; }
+  .progress.is-waiting .progress-bar span { animation: none; width: 100%; opacity: 0.4; }
+}
+
+.tally {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+.tally-cell {
+  flex: 1 1 110px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  text-align: center;
+}
+.tally-cell b { display: block; font-size: 20px; }
+.tally-cell span { font-size: 11.5px; color: var(--muted); }
+
+/* Fixed height and its own scroll: the log grows without bound during
+   a long crawl, and a panel that grows with it pushes the controls off
+   the screen exactly when they are wanted. */
+.log {
+  height: 220px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.log-line {
+  margin: 0 0 4px;
+  font-family: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+  word-break: break-word;
+}
+.log-ok { color: var(--teal); }
+.log-warn { color: #f2b24c; }
+.log-muted { color: var(--muted); }
+
+/* The optional inputs sit inside the collapsed block, so they need the
+   normal text colour back. */
+.how-to label { color: var(--text); display: block; }
