@@ -110,6 +110,28 @@ function omq_ensure_schema(): void
             KEY `kind` (`kind`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
     );
+
+    /* A saved crawl. The JSON itself is a file on disk, not a column:
+       an archive runs to megabytes, and a row that size makes every
+       query that touches the table pay for it — including the list,
+       which wants none of the content. The row is what the list
+       shows, `file` is where the rest is. */
+    $pdo->exec(
+        'CREATE TABLE IF NOT EXISTS `archives` (
+            `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `name`       VARCHAR(160) NOT NULL,
+            `site`       VARCHAR(255) NOT NULL DEFAULT \'\',
+            `file`       VARCHAR(160) NOT NULL,
+            `bytes`      INT UNSIGNED NOT NULL DEFAULT 0,
+            `records`    INT UNSIGNED NOT NULL DEFAULT 0,
+            `summary`    VARCHAR(255) NOT NULL DEFAULT \'\',
+            `complete`   TINYINT(1)   NOT NULL DEFAULT 0,
+            `created_at` DATETIME     NOT NULL,
+            `created_by` VARCHAR(255) NOT NULL DEFAULT \'\',
+            PRIMARY KEY (`id`),
+            KEY `created_at` (`created_at`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
 }
 
 /* ---------- limits ----------
@@ -123,12 +145,19 @@ function omq_ensure_schema(): void
    signed in and known. They are a guard against a loop, a stuck
    retry, or a script someone wrote at 2am. */
 const OMQ_LIMITS = [
-    'links'  => ['max' => 60,  'window' => '1 HOUR', 'what' => 'short links'],
-    'assets' => ['max' => 40,  'window' => '1 HOUR', 'what' => 'uploads'],
+    'links'    => ['max' => 60, 'window' => '1 HOUR', 'what' => 'short links'],
+    'assets'   => ['max' => 40, 'window' => '1 HOUR', 'what' => 'uploads'],
+    'archives' => ['max' => 20, 'window' => '1 HOUR', 'what' => 'saved archives'],
 ];
 
 /* Total bytes the brand library may hold, across everyone. */
 const OMQ_STORAGE_CAP = 2 * 1024 * 1024 * 1024; // 2 GB
+
+/* Archives are counted separately from the brand library. They grow by
+   crawling rather than by someone choosing a file, so one careless run
+   should not be able to fill the space the logos live in. */
+const OMQ_ARCHIVE_CAP = 1024 * 1024 * 1024;     // 1 GB across everyone
+const OMQ_ARCHIVE_MAX = 64 * 1024 * 1024;       // 64 MB for one archive
 
 function omq_check_rate(PDO $pdo, string $table, string $email): void
 {
@@ -153,12 +182,21 @@ function omq_check_rate(PDO $pdo, string $table, string $email): void
     }
 }
 
-function omq_check_storage(PDO $pdo, int $incoming): void
-{
-    $used = (int) $pdo->query('SELECT COALESCE(SUM(`bytes`), 0) FROM `assets`')->fetchColumn();
-    if ($used + $incoming > OMQ_STORAGE_CAP) {
+/* Defaults to the brand library, since that was the only thing with a
+   quota when this was written. The table name comes from a caller in
+   this repository, never from input. */
+function omq_check_storage(
+    PDO $pdo,
+    int $incoming,
+    string $table = 'assets',
+    int $cap = OMQ_STORAGE_CAP,
+    string $what = 'brand library'
+): void {
+    $used = (int) $pdo->query("SELECT COALESCE(SUM(`bytes`), 0) FROM `$table`")->fetchColumn();
+    if ($used + $incoming > $cap) {
         omq_fail(507, sprintf(
-            'The brand library is full (%.1f GB). Delete something before adding more.',
+            'The %s is full (%.1f GB). Delete something before adding more.',
+            $what,
             $used / 1073741824
         ));
     }
@@ -181,7 +219,8 @@ const OMQ_RESERVED = [
     'colour', 'colours', 'color', 'colors', 'icon', 'icons', 'palette',
     'card', 'cards', 'email', 'emails', 'template', 'templates',
     'logo', 'logos', 'vector', 'vectors', 'trace', 'upscale', 'pdf',
-    'scrape', 'scraper', 'crawl', 'crawler', 'archive',
+    'scrape', 'scraper', 'crawl', 'crawler', 'archive', 'archives',
+    'project', 'projects', 'read', 'reader',
 ];
 
 /* Ambiguous glyphs are left out so a code survives being read aloud

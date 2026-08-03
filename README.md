@@ -27,7 +27,7 @@ and the Brand Kit do, and those redirect rather than showing a gate.
 ## Dev Tools
 
 Four ideas, built as two tools, because each pair shares a base — plus one for
-building email cards and one for archiving a site.
+building email cards, and a scraper with a reader for what it collects.
 
 **Brand Kit** ([`brand.html`](brand.html)) — logos, icons, colours, fonts and
 templates. A brand asset library and an icon library differ only in what they
@@ -201,6 +201,38 @@ arriving from this company's address, whatever the intent was.
 The optional **Cookie header** exists for member-only content. It is held in the
 tab, sent with each request, never stored and never logged. It is for an account
 you hold, for content you are allowed to read.
+
+**Archives** ([`archive.html`](archive.html)) — a saved crawl, read back as a
+website. *Save as project* in the Scraper keeps the crawl on the server and
+`archive.html?id=N` opens it: a searchable column of titles on one side, the
+article on the other, filterable by collection, right-to-left where the content
+is. Archives are **shared, not per-account**, for the reason the brand library
+is — a crawl costs a day of patience and a lot of somebody else's bandwidth, and
+running it twice because the first copy was invisible is the outcome to avoid. A
+downloaded archive can also be opened straight from disk, which uploads nothing.
+
+The mapping from records to readable items is deliberately generic: posts,
+pages, comments, media and any custom post type the site had all keep their
+content in the same few field shapes, so one mapping serves collections this
+code has never heard of — which it must, since the scraper discovers them at run
+time.
+
+**The archived markup is another site's, and it is not trusted.** It renders in
+an iframe with neither `allow-scripts` nor `allow-same-origin`, so nothing in it
+can run, reach the page around it, or read the token in `localStorage`. The
+alternative is sanitising by stripping tags, which fails silently the first time
+someone finds a tag the stripper forgot. `base target="_blank"` is what keeps
+links usable inside a frame that is otherwise allowed to do nothing.
+
+The JSON is a file on disk and only its description is in the database. A row
+holding megabytes makes every query that touches the table pay for it, and the
+list wants none of the content. `archives/` denies everything over HTTP —
+`archive.php` hands a document out, and only to a signed-in account.
+
+Worth knowing when reading one: a post whose body is a plugin shortcode —
+`[islamic_books category_id=2]` — comes back from the REST API as that literal
+text, because the plugin expands it when the page is rendered and the API never
+renders. Those are the pages the slower page-text phase is actually for.
 
 The two are deliberately independent. QR Studio can *offer* to make a short
 link, so a printed code can be re-pointed later, but it does not need one and

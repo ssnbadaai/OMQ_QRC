@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1220" />
+  <meta name="robots" content="noindex" />
+  <title>OMQ Archives</title>
+  <link rel="icon" href="IMG/omq-logo.png" />
+  <link rel="apple-touch-icon" href="IMG/omq-logo.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <header class="topbar">
+    <a class="brand" href="dev.html">
+      <img src="IMG/omq-logo.png" alt="OMQ" class="brand-logo" />
+      <span class="brand-name">OMQ <b>Archives</b></span>
+    </a>
+    <div class="topbar-right">
+      <span class="account" id="authAccount"></span>
+      <a class="topbar-link" href="scrape.html">Scraper →</a>
+    </div>
+  </header>
+
+  <!-- ============ LIBRARY ============ -->
+  <main class="admin-wrap" id="libraryPanel">
+    <section class="panel">
+      <div class="admin-header">
+        <h2>Saved archives (<span id="archiveCount">0</span>)</h2>
+        <button class="ghost" id="reloadBtn">Reload</button>
+      </div>
+
+      <p class="muted-copy">
+        A crawl kept so it can be read back. Shared with everyone here, the
+        way the Brand Kit is — a crawl costs a day of patience and a lot of
+        someone else's bandwidth, and running it twice because the first copy
+        was invisible is the thing worth avoiding.
+      </p>
+
+      <div id="archiveList"></div>
+      <p class="status" id="libraryStatus"></p>
+
+      <h3>Or open a file</h3>
+      <label class="file-label" id="dropZone">
+        <input type="file" id="fileInput" accept="application/json,.json" />
+        <span id="fileText">Choose an archive JSON — or drop one here</span>
+      </label>
+      <p class="muted-copy">
+        Reads a downloaded archive without saving it. Nothing is uploaded.
+      </p>
+    </section>
+  </main>
+
+  <!-- ============ READER ============ -->
+  <main class="reader hidden" id="readerPanel">
+
+    <div class="reader-bar">
+      <button class="ghost" id="backBtn">← Archives</button>
+      <span class="reader-title" id="readerTitle"></span>
+      <span class="reader-meta" id="readerMeta"></span>
+    </div>
+
+    <div class="reader-body">
+
+      <aside class="reader-list" id="readerList">
+        <div class="reader-filters">
+          <input type="search" id="searchInput" placeholder="Search titles and text"
+                 autocapitalize="off" autocorrect="off" spellcheck="false" />
+          <select id="sectionFilter"><option value="">Everything</option></select>
+        </div>
+        <p class="reader-count" id="itemCount"></p>
+        <div id="itemList"></div>
+      </aside>
+
+      <article class="reader-page" id="readerPage">
+        <p class="muted-copy" id="readerEmpty">Pick something on the left to read it.</p>
+
+        <div class="hidden" id="articleWrap">
+          <h1 id="articleTitle"></h1>
+          <p class="article-meta" id="articleMeta"></p>
+          <div class="article-actions">
+            <a class="btn-link" id="articleOriginal" target="_blank" rel="noopener noreferrer">Open the original</a>
+            <button class="ghost" id="copyTextBtn">Copy text</button>
+          </div>
+          <!-- The archived markup is another site's, and it is not trusted.
+               It renders in a sandbox with no script and no access to this
+               page — see archive.js. -->
+          <iframe id="articleFrame" class="article-frame" title="Archived page"
+                  sandbox="allow-popups allow-popups-to-escape-sandbox"
+                  referrerpolicy="no-referrer"></iframe>
+          <pre class="article-text hidden" id="articleText"></pre>
+        </div>
+      </article>
+
+    </div>
+  </main>
+
+  <footer class="footer">
+    OMQ Archives · <a href="dev.html">Dev Tools</a> · <a href="scrape.html">Scraper</a>
+  </footer>
+
+  <script src="util.js"></script>
+  <script src="api.js"></script>
+  <script src="archive.js"></script>
+</body>
+</html>

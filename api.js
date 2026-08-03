@@ -11,6 +11,7 @@
   const API_BASE = 'api.php';
   const ASSET_BASE = 'assets.php';
   const SCRAPE_BASE = 'scrape.php';
+  const ARCHIVE_BASE = 'archive.php';
   const TOKEN_KEY = 'omq-google-token';
 
   let onSignedIn = null;
@@ -442,6 +443,17 @@
       colour: (c) => call('colour', c, { base: ASSET_BASE }),
       upload: (form) => call('upload', null, { base: ASSET_BASE, form }),
       remove: (id) => call('delete', { id }, { base: ASSET_BASE }),
+    },
+
+    /* Saved crawls. Shared, like the brand library — see archive.php.
+       `get` answers with the stored document itself rather than
+       wrapping it, since that is exactly what the reader wants. */
+    archives: {
+      list: () => call('list', null, { base: ARCHIVE_BASE }),
+      get: (id) => call('get', { id }, { base: ARCHIVE_BASE }),
+      save: (body) => call('save', body, { base: ARCHIVE_BASE }),
+      rename: (body) => call('rename', body, { base: ARCHIVE_BASE }),
+      remove: (id) => call('delete', { id }, { base: ARCHIVE_BASE }),
     },
 
     /* Scraper. One fetch per call: the loop that decides what to ask

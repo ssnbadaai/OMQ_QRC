@@ -133,15 +133,23 @@
 
       <p class="muted-copy" id="resultSummary"></p>
 
+      <label>Name it <span class="opt">optional</span>
+        <input type="text" id="projectName" placeholder="the site's address" />
+      </label>
+
       <div class="actions">
-        <button id="downloadBtn">Download JSON</button>
+        <button id="saveBtn">Save as project</button>
+        <button class="secondary" id="downloadBtn">Download JSON</button>
         <button class="secondary" id="downloadTextBtn">Download text only</button>
       </div>
       <p class="status" id="resultStatus"></p>
 
       <p class="muted-copy">
-        Nothing is kept on the server — this all lives in the tab until you
-        download it. Closing the page loses it.
+        <b>Save as project</b> keeps it on the server and opens it in
+        <a href="archive.html">Archives</a>, where it reads as a website —
+        shared with everyone here, so nobody crawls the same site twice.
+        Download keeps a copy for yourself. Do neither and it is lost when
+        this tab closes: nothing is stored until you ask for it.
       </p>
     </section>
   </main>

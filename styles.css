@@ -1174,3 +1174,105 @@ button.ghost:hover { color: #ff6b6b; border-color: #ff6b6b; }
 /* The optional inputs sit inside the collapsed block, so they need the
    normal text colour back. */
 .how-to label { color: var(--text); display: block; }
+
+/* =========================================================
+   ARCHIVES (archive.html)
+   ========================================================= */
+
+/* Full width, unlike the other admin pages: this one is a reading
+   view, and a column of titles beside an article needs the room. */
+.reader {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 18px 22px 32px;
+}
+
+.reader-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.reader-title { font-size: 17px; font-weight: 600; }
+.reader-meta { font-size: 13px; color: var(--muted); }
+
+.reader-body {
+  display: grid;
+  grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.reader-list,
+.reader-page {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  min-width: 0;
+}
+
+/* Both columns scroll on their own so the list stays put while an
+   article is read — the alternative is losing your place in a list of
+   two thousand titles every time you open one. */
+.reader-list,
+.reader-page {
+  max-height: calc(100dvh - 190px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.reader-filters { display: grid; gap: 8px; margin-bottom: 10px; }
+.reader-count { margin: 0 0 10px; font-size: 12px; color: var(--muted); }
+
+.item-row {
+  display: block;
+  width: 100%;
+  text-align: start;
+  background: var(--panel-2);
+  border: 1px solid transparent;
+  border-radius: 9px;
+  padding: 9px 11px;
+  margin-bottom: 6px;
+  color: var(--text);
+  cursor: pointer;
+}
+.item-row:hover { border-color: var(--border); }
+.item-row.is-open { border-color: var(--accent); }
+.item-row b { display: block; font-size: 13.5px; font-weight: 500; line-height: 1.45; }
+.item-meta { font-size: 11.5px; color: var(--muted); }
+
+.reader-page h1 { margin: 0 0 8px; font-size: 22px; line-height: 1.4; }
+.article-meta { margin: 0 0 12px; font-size: 12.5px; color: var(--muted); }
+.article-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+
+/* The archived markup renders in here, sandboxed. Its height cannot be
+   measured from outside a cross-origin frame, so it is given a tall
+   box and scrolls within it rather than being clipped at a guess. */
+.article-frame {
+  width: 100%;
+  height: calc(100dvh - 340px);
+  min-height: 320px;
+  border: 0;
+  background: transparent;
+}
+
+.article-text {
+  margin: 0;
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.85;
+  color: var(--text);
+}
+
+@media (max-width: 900px) {
+  .reader { padding: 14px 14px 28px; }
+  .reader-body { grid-template-columns: minmax(0, 1fr); }
+  /* Stacked, the two panes share one page scroll; capping their height
+     would produce two scrollbars inside a third. */
+  .reader-list { max-height: 42dvh; }
+  .reader-page { max-height: none; overflow: visible; }
+  .article-frame { height: 70dvh; }
+}

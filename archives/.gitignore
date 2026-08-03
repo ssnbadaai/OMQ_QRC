@@ -1,0 +1,6 @@
+# Saved crawls belong to the running site, not the repository. The
+# folder and its deny rule are tracked so a fresh deployment has
+# somewhere safe to write.
+*
+!.gitignore
+!.htaccess

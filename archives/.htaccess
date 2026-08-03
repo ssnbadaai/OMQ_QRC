@@ -1,0 +1,9 @@
+# Saved crawls. Never served directly — archive.php hands them out, and
+# only to a signed-in account. Served from here they would be readable
+# by anyone who guessed a filename, which is the whole point of the
+# random names being no defence on its own.
+<IfModule mod_authz_core.c>
+  Require all denied
+</IfModule>
+
+Options -Indexes -ExecCGI

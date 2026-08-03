@@ -27,7 +27,7 @@ let run = null;
 let stopping = false;
 
 /* ---------- session ---------- */
-['probeBtn', 'startBtn', 'downloadBtn', 'downloadTextBtn'].forEach((id) => {
+['probeBtn', 'startBtn', 'saveBtn', 'downloadBtn', 'downloadTextBtn'].forEach((id) => {
   $(id).dataset.label = $(id).textContent;
 });
 
@@ -132,6 +132,11 @@ async function probe() {
       run.delay = Math.min(asked, 30);
       note(`robots.txt asks for ${asked}s between requests — using that.`, 'warn');
     }
+
+    /* A new target means the previous save no longer describes what is
+       in hand, so the button goes back to offering to save. */
+    saved = null;
+    $('saveBtn').textContent = $('saveBtn').dataset.label;
 
     renderPlan(report);
     $('runPanel').classList.remove('hidden');
@@ -398,6 +403,35 @@ function summarise() {
 
 const stamp = () => new Date().toISOString().slice(0, 10);
 const host = () => safeName((run.origin || '').replace(/^https?:\/\//, ''), 'site');
+
+/* Saved once and then linked to, rather than passed around as a file
+   nobody else has. `saved` is what stops a second click making a
+   duplicate of a crawl that took all afternoon. */
+let saved = null;
+
+$('saveBtn').addEventListener('click', async () => {
+  const statusEl = $('resultStatus');
+  try {
+    if (saved) {
+      location.href = 'archive.html?id=' + saved.id;
+      return;
+    }
+    busy($('saveBtn'), true, 'Saving…');
+
+    const res = await API.archives.save({
+      name: $('projectName').value.trim(),
+      archive: run.result,
+    });
+    saved = res.archive;
+
+    busy($('saveBtn'), false);
+    $('saveBtn').textContent = 'Open in Archives →';
+    say(statusEl, `✓ Saved as "${saved.name}".`, 'ok');
+  } catch (err) {
+    busy($('saveBtn'), false);
+    handle(err, statusEl);
+  }
+});
 
 $('downloadBtn').addEventListener('click', () => {
   const json = JSON.stringify(run.result, null, 2);
