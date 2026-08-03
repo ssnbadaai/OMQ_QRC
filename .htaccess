@@ -45,6 +45,18 @@ Options -Indexes
   # but not what is inside a dot-directory.
   RewriteRule ^\.git(/|$) - [F,L]
 
+  # ---------- The retired hostname ----------
+  # The site moved to tool.omqpro.com. qr.omqpro.com is kept pointed at
+  # this same document root and sends everything on, because codes
+  # printed before the move encode the old host and paper cannot be
+  # recalled. Deleting the subdomain would kill those scans permanently;
+  # this costs one redirect.
+  #
+  # Below the .well-known rule on purpose: AutoSSL still has to renew the
+  # old certificate, and it cannot if its token is redirected away.
+  RewriteCond %{HTTP_HOST} ^(www\.)?qr\.omqpro\.com$ [NC]
+  RewriteRule ^(.*)$ https://tool.omqpro.com/$1 [R=301,L]
+
   # PHP only receives Authorization if it is handed over explicitly;
   # many cPanel/CGI setups drop it, which makes every API call look
   # signed-out.
